@@ -16,6 +16,7 @@
 #include <masternodes/tokens.h>
 #include <masternodes/undos.h>
 #include <masternodes/poolpairs.h>
+#include <masternodes/oracles.h>
 #include <masternodes/gv.h>
 #include <uint256.h>
 #include <wallet/ismine.h>
@@ -217,6 +218,7 @@ class CCustomCSView
         , public CPoolPairView
         , public CGovView
         , public CAnchorConfirmsView
+        , public COracleView
 {
 public:
     CCustomCSView() = default;

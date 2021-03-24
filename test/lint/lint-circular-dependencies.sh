@@ -22,7 +22,6 @@ EXPECTED_CIRCULAR_DEPENDENCIES=(
     "chainparams -> key_io -> chainparams"
     "chainparams -> masternodes/mn_checks -> validation -> chainparams"
     "chainparams -> masternodes/mn_checks -> index/txindex -> index/base -> chainparams"
-    "chainparams -> masternodes/mn_checks -> validation -> pos -> chainparams"
     "chainparams -> masternodes/mn_checks -> validation -> spv/spv_wrapper -> chainparams"
     "chainparams -> masternodes/mn_checks -> validation -> wallet/wallet -> chainparams"
     "chainparams -> masternodes/mn_checks -> chainparams"
@@ -54,6 +53,10 @@ EXPECTED_CIRCULAR_DEPENDENCIES=(
     "policy/fees -> txmempool -> validation -> wallet/wallet -> util/fees -> policy/fees"
     "chainparams -> masternodes/mn_checks -> txmempool -> chainparams"
     "masternodes/oracles -> masternodes/tokenpriceiterator -> masternodes/oracles"
+    "pos_kernel -> validation -> pos_kernel"
+    "pos -> pos_kernel -> validation -> pos"
+    "pos_kernel -> validation -> txdb -> pos_kernel"
+    "pos -> pos_kernel -> validation -> txdb -> pos"
 )
 
 EXIT_CODE=0

@@ -19,6 +19,9 @@ enum class CfrStatus : unsigned char {
   CfrStatusRejected  = 0x02,
   CfrStatusCompleted = 0x03
 };
+
+std::string CfrStatusToString(const CfrStatus status);
+
 enum class CfrVoteType : unsigned char {
   CfrVoteTypeYes     = 0x01,
   CfrVoteTypeNo      = 0x02,
@@ -80,7 +83,8 @@ struct CCfrObject
     uint8_t processedPeriodCount;
     CAmount amount;
     CScript address;
-    std::map<CScript, CCfrVote> votingMap; // CScript meaning the masternode destination address
+    // Voting map: key - masternode address, value - vote
+    std::map<CScript, CCfrVote> votingMap;
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action)
@@ -101,26 +105,27 @@ public:
 
     ~CCfrView() override = default;
 
-    Res CreateCfr(const CCfrObjectKey& key, const CCfrObject& value);
-
-    Res UpdateCfr(const CCfrObjectKey& key, const CCfrObject& value);
-
-    Res RemoveCfr(const CCfrObjectKey& key);
+    Res CreateCfr(const CCfrId& cfrId, const CScript& address, const CAmount& amount, const uint8_t period);
 
     ResVal<CCfrObject> GetCfr(const CCfrObjectKey& key) const;
 
     Res UpdateCfrStatus(const CCfrObjectKey& key, const CfrStatus newStatus);
 
+    Res AddCfrVote(const CCfrId& cfrId, const CScript& masternodeAddress, const CCfrVote& vote);
+
+    std::set<CCfrId> GetCfrIdsForPaying() const;
+
     Res AddCfrIdForPaying(const CCfrId& id);
 
     Res RemoveCfrIdForPaying(const CCfrId& id);
 
-    std::vector<CCfrId> GetCfrIdsForPaying() const;
-
     void ForEachCfr(std::function<bool(CCfrObjectKey const &, CCfrObject const &)> callback, CCfrObjectKey const & start = {}) const;
 
 private:
-    struct ByKey {
+    struct CfrPrefix {
+        static const unsigned char prefix;
+    };
+    struct IdsForPayingPrefix {
         static const unsigned char prefix;
     };
 

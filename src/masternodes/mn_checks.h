@@ -66,13 +66,16 @@ enum class CustomTxType : uint8_t
     UpdateOracleAppoint   = 't',
     SetOracleData         = 'y',
     // ICX
-    ICXCreateOrder      = '1',
-    ICXMakeOffer        = '2',
-    ICXSubmitDFCHTLC    = '3',
-    ICXSubmitEXTHTLC    = '4',
-    ICXClaimDFCHTLC     = '5',
-    ICXCloseOrder       = '6',
-    ICXCloseOffer       = '7',
+    ICXCreateOrder        = '1',
+    ICXMakeOffer          = '2',
+    ICXSubmitDFCHTLC      = '3',
+    ICXSubmitEXTHTLC      = '4',
+    ICXClaimDFCHTLC       = '5',
+    ICXCloseOrder         = '6',
+    ICXCloseOffer         = '7',
+    // On-Chain-Gov
+    CreateCfr             = 210,
+    VoteCfr               = 211,
 };
 
 inline CustomTxType CustomTxCodeToType(uint8_t ch) {
@@ -106,6 +109,8 @@ inline CustomTxType CustomTxCodeToType(uint8_t ch) {
         case CustomTxType::ICXClaimDFCHTLC:
         case CustomTxType::ICXCloseOrder:
         case CustomTxType::ICXCloseOffer:
+        case CustomTxType::CreateCfr:
+        case CustomTxType::VoteCfr:
         case CustomTxType::None:
             return type;
     }
@@ -152,6 +157,8 @@ struct CICXSubmitEXTHTLCMessage;
 struct CICXClaimDFCHTLCMessage;
 struct CICXCloseOrderMessage;
 struct CICXCloseOfferMessage;
+struct CCreateCfrMessage;
+struct CVoteCfrMessage;
 
 struct CCreateMasterNodeMessage {
     char operatorType;
@@ -267,7 +274,9 @@ typedef boost::variant<
     CICXSubmitEXTHTLCMessage,
     CICXClaimDFCHTLCMessage,
     CICXCloseOrderMessage,
-    CICXCloseOfferMessage
+    CICXCloseOfferMessage,
+    CCreateCfrMessage,
+    CVoteCfrMessage
 > CCustomTxMessage;
 
 CCustomTxMessage customTypeToMessage(CustomTxType txType);

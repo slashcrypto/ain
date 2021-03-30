@@ -91,6 +91,11 @@ CAmount GetTokenCreationFee(int)
     return Params().GetConsensus().token.creationFee;
 }
 
+CAmount GetCfrCreationFee(int)
+{
+    return Params().GetConsensus().cfr.fee;
+}
+
 CMasternode::CMasternode()
     : mintedBlocks(0)
     , ownerAuthAddress()

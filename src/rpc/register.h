@@ -27,6 +27,8 @@ void RegisterAccountsRPCCommands(CRPCTable &tableRPC);
 void RegisterTokensRPCCommands(CRPCTable &tableRPC);
 /** Register poolpair RPC commands */
 void RegisterPoolpairRPCCommands(CRPCTable &tableRPC);
+/** Register cfr RPC commands */
+void RegisterCfrRPCCommands(CRPCTable &tableRPC);
 /** Register blockchain masternode RPC commands */
 void RegisterMNBlockchainRPCCommands(CRPCTable &tableRPC);
 /** Register SPV (anchoring) RPC commands */
@@ -48,6 +50,7 @@ static inline void RegisterAllCoreRPCCommands(CRPCTable &t)
     RegisterAccountsRPCCommands(t);
     RegisterTokensRPCCommands(t);
     RegisterPoolpairRPCCommands(t);
+    RegisterCfrRPCCommands(t);
     RegisterMNBlockchainRPCCommands(t);
     RegisterSpvRPCCommands(t);
     RegisterOraclesRPCCommands(t);

@@ -56,6 +56,8 @@ std::string ToString(CustomTxType type) {
         case CustomTxType::ICXClaimDFCHTLC:     return "ICXClaimDFCHTLC";
         case CustomTxType::ICXCloseOrder:       return "ICXCloseOrder";
         case CustomTxType::ICXCloseOffer:       return "ICXCloseOffer";
+        case CustomTxType::CreateCfr:           return "CreateCfr";
+        case CustomTxType::VoteCfr:             return "VoteCfr";
         case CustomTxType::None:                return "None";
     }
     return "None";
@@ -131,6 +133,8 @@ CCustomTxMessage customTypeToMessage(CustomTxType txType) {
         case CustomTxType::ICXClaimDFCHTLC:         return CICXClaimDFCHTLCMessage{};
         case CustomTxType::ICXCloseOrder:           return CICXCloseOrderMessage{};
         case CustomTxType::ICXCloseOffer:           return CICXCloseOfferMessage{};
+        case CustomTxType::CreateCfr:               return CCreateCfrMessage{};
+        case CustomTxType::VoteCfr:                 return CCreateCfrMessage{};
         case CustomTxType::None:                    return CCustomTxMessageNone{};
     }
     return CCustomTxMessageNone{};
@@ -374,6 +378,16 @@ public:
     }
 
     Res operator()(CICXCloseOfferMessage& obj) const {
+        auto res = isPostEunosFork();
+        return !res ? res : serialize(obj);
+    }
+
+    Res operator()(CCreateCfrMessage& obj) const {
+        auto res = isPostEunosFork();
+        return !res ? res : serialize(obj);
+    }
+
+    Res operator()(CVoteCfrMessage& obj) const {
         auto res = isPostEunosFork();
         return !res ? res : serialize(obj);
     }
@@ -1614,6 +1628,14 @@ public:
 
         res = mnview.ICXCloseOffer(closeoffer);
         return !res ? res : mnview.ICXCloseMakeOfferTx(*offer, CICXMakeOffer::STATUS_CLOSED);
+    }
+
+    Res operator()(const CCreateCfrMessage&) const {
+        return Res::Ok();
+    }
+
+    Res operator()(const CVoteCfrMessage&) const {
+        return Res::Ok();
     }
 
     Res operator()(const CCustomTxMessageNone&) const {

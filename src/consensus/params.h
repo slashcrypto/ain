@@ -177,6 +177,13 @@ struct Params {
     };
     SpvParams spv;
 
+    struct CfrParams {
+        uint32_t majorityThreshold;
+        int votingPeriod;
+        uint32_t minVoting;
+    };
+    CfrParams cfr;
+
     std::map<CommunityAccountType, CAmount> nonUtxoBlockSubsidies;
     std::map<CommunityAccountType, uint32_t> newNonUTXOSubsidies;
 };

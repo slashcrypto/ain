@@ -16,6 +16,7 @@
 #include <masternodes/gv.h>
 #include <masternodes/oracles.h>
 #include <masternodes/poolpairs.h>
+#include <masternodes/proposals.h>
 #include <masternodes/tokens.h>
 #include <masternodes/undos.h>
 #include <uint256.h>
@@ -37,6 +38,7 @@ int GetMnActivationDelay(int height);
 int GetMnResignDelay(int height);
 CAmount GetTokenCollateralAmount();
 CAmount GetMnCreationFee(int height);
+CAmount GetCfrCreationFee(int height);
 CAmount GetTokenCreationFee(int height);
 CAmount GetMnCollateralAmount(int height);
 
@@ -247,6 +249,7 @@ class CCustomCSView
         , public CAnchorConfirmsView
         , public COracleView
         , public CICXOrderView
+        , public CCfrView
 {
 public:
     // Increase version when underlaying tables are changed

@@ -179,6 +179,11 @@ public:
         consensus.spv.anchors_address = "1FtZwEZKknoquUb6DyQHFZ6g6oomXJYEcb";
         consensus.spv.minConfirmations = 6;
 
+        consensus.cfr.fee = 10 * COIN;
+        consensus.cfr.majorityThreshold = 5000; // vote pass with over 50% majority
+        consensus.cfr.minVoting = 1000; // 10% of the masternodes must vote
+        consensus.cfr.votingPeriod = 70000; // tally votes every 70K blocks
+
         consensus.nonUtxoBlockSubsidies.emplace(CommunityAccountType::IncentiveFunding, 45 * COIN / 200); // 45 DFI of 200 per block (rate normalized to (COIN == 100%))
         consensus.nonUtxoBlockSubsidies.emplace(CommunityAccountType::AnchorReward, COIN /10 / 200);       // 0.1 DFI of 200 per block
 
@@ -393,6 +398,11 @@ public:
         consensus.spv.subsidyIncreaseValue = 5 * COIN;
         consensus.spv.minConfirmations = 1;
 
+        consensus.cfr.fee = 10 * COIN;
+        consensus.cfr.majorityThreshold = 5000; // vote pass with over 50% majority
+        consensus.cfr.minVoting = 1000; // 10% of the masternodes must vote
+        consensus.cfr.votingPeriod = 7000; // tally votes every 7K blocks
+
         consensus.nonUtxoBlockSubsidies.emplace(CommunityAccountType::IncentiveFunding, 45 * COIN / 200); // 45 DFI @ 200 per block (rate normalized to (COIN == 100%))
         consensus.nonUtxoBlockSubsidies.emplace(CommunityAccountType::AnchorReward, COIN/10 / 200);       // 0.1 DFI @ 200 per block
 
@@ -570,6 +580,11 @@ public:
         consensus.spv.subsidyIncreaseValue = 5 * COIN;
         consensus.spv.minConfirmations = 1;
 
+        consensus.cfr.fee = 10 * COIN;
+        consensus.cfr.majorityThreshold = 5000; // vote pass with over 50% majority
+        consensus.cfr.minVoting = 1000; // 10% of the masternodes must vote
+        consensus.cfr.votingPeriod = 7000; // tally votes every 7K blocks
+
         consensus.nonUtxoBlockSubsidies.emplace(CommunityAccountType::IncentiveFunding, 45 * COIN / 200); // 45 DFI @ 200 per block (rate normalized to (COIN == 100%))
         consensus.nonUtxoBlockSubsidies.emplace(CommunityAccountType::AnchorReward, COIN/10 / 200);       // 0.1 DFI @ 200 per block
 
@@ -738,6 +753,11 @@ public:
         consensus.spv.subsidyIncreasePeriod = 60;
         consensus.spv.subsidyIncreaseValue = 5 * COIN;
         consensus.spv.minConfirmations = 6;
+
+        consensus.cfr.fee = 10 * COIN;
+        consensus.cfr.majorityThreshold = 5000; // vote pass with over 50% majority
+        consensus.cfr.minVoting = 1000; // 10% of the masternodes must vote
+        consensus.cfr.votingPeriod = 700; // tally votes every 700 blocks
 
         consensus.nonUtxoBlockSubsidies.emplace(CommunityAccountType::IncentiveFunding, 10 * COIN / 50); // normalized to (COIN == 100%) // 10 per block
         consensus.nonUtxoBlockSubsidies.emplace(CommunityAccountType::AnchorReward, COIN/10 / 50);       // 0.1 per block

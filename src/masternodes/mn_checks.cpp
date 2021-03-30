@@ -1711,3 +1711,17 @@ Res ApplySetOracleDataTx(CCustomCSView &mnview,
 
     return Res::Ok();
 }
+
+Res ApplyCreateCfrTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth = false, UniValue* rpcInfo = nullptr)
+{
+    constexpr auto base = "Create cfr";
+
+    return Res::Ok(base);
+}
+Res ApplyVoteCfrTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth = false, UniValue* rpcInfo = nullptr)
+{
+    constexpr auto base = "Vote cfr";
+
+    return Res::Ok(base);
+}
+

@@ -55,12 +55,14 @@ enum class CustomTxType : unsigned short
     //set governance variable
     SetGovVariable        = 'G', // 71
     // Auto auth TX
-    AutoAuthPrep       = 'A',
+    AutoAuthPrep       = 'A',    // 65
     // oracles
     AppointOracle         = 200,
     RemoveOracleAppoint   = 201,
     UpdateOracleAppoint   = 202,
     SetOracleData         = 203,
+    CreateCfr             = 210,
+    VoteCfr               = 211
 };
 
 inline CustomTxType CustomTxCodeToType(unsigned char ch) {
@@ -87,6 +89,8 @@ inline CustomTxType CustomTxCodeToType(unsigned char ch) {
         case CustomTxType::RemoveOracleAppoint:
         case CustomTxType::UpdateOracleAppoint:
         case CustomTxType::SetOracleData:
+        case CustomTxType::CreateCfr:
+        case CustomTxType::VoteCfr:
             return type;
     }
     return CustomTxType::None;
@@ -115,6 +119,8 @@ inline std::string ToString(CustomTxType type) {
         case CustomTxType::RemoveOracleAppoint: return "RemoveOracleAppoint";
         case CustomTxType::UpdateOracleAppoint: return "UpdateOracleAppoint";
         case CustomTxType::SetOracleData:       return "SetOracleData";
+        case CustomTxType::CreateCfr:           return "CreateCFR";
+        case CustomTxType::VoteCfr:             return "VoteCFR";
         default:                                return "None";
     }
 }
@@ -169,6 +175,11 @@ Res ApplyAppointOracleTx(CCustomCSView & mnview, CCoinsViewCache const & coins, 
 Res ApplyRemoveOracleAppointTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata,Consensus::Params const & consensusParams, bool skipAuth = false, UniValue* rpcInfo = nullptr);
 Res ApplyUpdateOracleAppointTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth = false, UniValue* rpcInfo = nullptr);
 Res ApplySetOracleDataTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth = false, UniValue* rpcInfo = nullptr);
+
+/* CFR */
+Res ApplyCreateCfrTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth = false, UniValue* rpcInfo = nullptr);
+Res ApplyVoteCfrTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth = false, UniValue* rpcInfo = nullptr);
+
 
 bool IsMempooledCustomTxCreate(const CTxMemPool& pool, const uint256 & txid);
 

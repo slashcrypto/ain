@@ -97,7 +97,7 @@ struct CCfrObject
 class CCfrView : public virtual CStorageView
 {
 public:
-    CCfrView();
+    CCfrView() : _cfrIdsForPayingKey{"cfridsforpaying"} {}
 
     ~CCfrView() override = default;
 
@@ -109,10 +109,22 @@ public:
 
     ResVal<CCfrObject> GetCfr(const CCfrObjectKey& key) const;
 
+    Res UpdateCfrStatus(const CCfrObjectKey& key, const CfrStatus newStatus);
+
+    Res AddCfrIdForPaying(const CCfrId& id);
+
+    Res RemoveCfrIdForPaying(const CCfrId& id);
+
+    std::vector<CCfrId> GetCfrIdsForPaying() const;
+
+    void ForEachCfr(std::function<bool(CCfrObjectKey const &, CCfrObject const &)> callback, CCfrObjectKey const & start = {}) const;
+
 private:
-    struct ByName {
+    struct ByKey {
         static const unsigned char prefix;
     };
+
+    const std::string _cfrIdsForPayingKey;
 };
 
 #endif

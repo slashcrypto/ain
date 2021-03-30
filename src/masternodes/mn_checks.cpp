@@ -199,7 +199,12 @@ Res ApplyCustomTx(CCustomCSView & base_mnview, CCoinsViewCache const & coins, CT
             case CustomTxType::SetOracleData:
                 res = ApplySetOracleDataTx(mnview, coins, tx, height, metadata, consensusParams);
                 break;
-
+            case CustomTxType::CreateCfr:
+                res = ApplyCreateCfrTx(mnview, coins, tx, height, metadata, consensusParams);
+                break;
+            case CustomTxType::VoteCfr:
+                res = ApplyVoteCfrTx(mnview, coins, tx, height, metadata, consensusParams);
+                break;
             default:
                 return Res::Ok(); // not "custom" tx
         }
@@ -1716,11 +1721,19 @@ Res ApplyCreateCfrTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTra
 {
     constexpr auto base = "Create cfr";
 
+    CDataStream ss(metadata, SER_NETWORK, PROTOCOL_VERSION);
+    CCreateCfrMessage msg;
+    ss >> msg;
+
     return Res::Ok(base);
 }
 Res ApplyVoteCfrTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth = false, UniValue* rpcInfo = nullptr)
 {
     constexpr auto base = "Vote cfr";
+
+    CDataStream ss(metadata, SER_NETWORK, PROTOCOL_VERSION);
+    CVoteCfrMessage msg;
+    ss >> msg;
 
     return Res::Ok(base);
 }

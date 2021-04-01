@@ -3,9 +3,9 @@
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 
 #include <masternodes/accounts.h>
+#include <masternodes/masternodes_common.h>
 
-/// @attention make sure that it does not overlap with those in masternodes.cpp/tokens.cpp/undos.cpp/accounts.cpp !!!
-const unsigned char CAccountsView::ByBalanceKey::prefix = 'a';
+const unsigned char CAccountsView::ByBalanceKey::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesAccountsByBalanceKey);
 
 void CAccountsView::ForEachBalance(std::function<bool(CScript const &, CTokenAmount const &)> callback, BalanceKey const & start) const
 {

@@ -7,6 +7,7 @@
 
 static const unsigned int DOUBLE_SIGN_MINIMUM_PROOF_INTERVAL = 100;
 
+// This DB is separated from CCustomView, so these prefixes can overlap with those
 const unsigned char CMintedHeadersView::MintedHeaders ::prefix = 'h';
 const unsigned char CCriminalProofsView::Proofs       ::prefix = 'm';
 

@@ -5,8 +5,9 @@
 #include <masternodes/gv.h>
 #include <masternodes/govvariables/lp_daily_dfi_reward.h>
 #include <masternodes/govvariables/lp_splits.h>
+#include <masternodes/masternodes_common.h>
 
-const unsigned char CGovView::ByName::prefix = 'g';
+const unsigned char CGovView::ByName::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesGovVarsByName);
 
 Res CGovView::SetVariable(GovVariable const & var)
 {

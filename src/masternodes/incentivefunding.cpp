@@ -3,9 +3,10 @@
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 
 #include <masternodes/incentivefunding.h>
+#include <masternodes/masternodes_common.h>
 
 /// @attention make sure that it does not overlap with those in masternodes.cpp/tokens.cpp/undos.cpp/accounts.cpp !!!
-const unsigned char CCommunityBalancesView::ById::prefix = 'F';
+const unsigned char CCommunityBalancesView::ById::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesCommunityBalancesById);
 
 
 CAmount CCommunityBalancesView::GetCommunityBalance(CommunityAccountType account) const

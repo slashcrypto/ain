@@ -9,8 +9,9 @@
 #include <rpc/protocol.h>
 
 #include <masternodes/tokenpriceiterator.h>
+#include <masternodes/masternodes_common.h>
 
-const unsigned char COracleView::ByName::prefix = 'O'; // the big O for Oracles
+const unsigned char COracleView::ByName::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesOraclesByName);
 
 namespace {
 template <typename Code>

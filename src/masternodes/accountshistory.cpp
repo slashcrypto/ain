@@ -6,15 +6,15 @@
 #include <masternodes/accounts.h>
 #include <masternodes/masternodes.h>
 #include <masternodes/rewardhistoryold.h>
+#include <masternodes/masternodes_common.h>
 #include <key_io.h>
 
 #include <limits>
 
-/// @attention make sure that it does not overlap with those in masternodes.cpp/tokens.cpp/undos.cpp/accounts.cpp !!!
-const unsigned char CAccountsHistoryView::ByMineAccountHistoryKey::prefix = 'm';
-const unsigned char CAccountsHistoryView::ByAllAccountHistoryKey::prefix = 'h';
-const unsigned char CRewardsHistoryView::ByMineRewardHistoryKey::prefix = 'Q';
-const unsigned char CRewardsHistoryView::ByAllRewardHistoryKey::prefix = 'W';
+const unsigned char CAccountsHistoryView::ByMineAccountHistoryKey::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesAccountsHistoryByMine);
+const unsigned char CAccountsHistoryView::ByAllAccountHistoryKey::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesAccountsHistoryByAll);
+const unsigned char CRewardsHistoryView::ByMineRewardHistoryKey::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesRewadsHistoryByMine);
+const unsigned char CRewardsHistoryView::ByAllRewardHistoryKey::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesRewadsHistoryByAll);
 
 void CAccountsHistoryView::ForEachMineAccountHistory(std::function<bool(AccountHistoryKey const &, CLazySerialize<AccountHistoryValue>)> callback, AccountHistoryKey const & start) const
 {

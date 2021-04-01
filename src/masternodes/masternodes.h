@@ -157,6 +157,8 @@ class CLastHeightView : public virtual CStorageView
 public:
     int GetLastHeight() const;
     void SetLastHeight(int height);
+private:
+    struct LastHeight { static const unsigned char prefix; };
 };
 
 class CFoundationsDebtView : public virtual CStorageView
@@ -164,6 +166,8 @@ class CFoundationsDebtView : public virtual CStorageView
 public:
     CAmount GetFoundationsDebt() const;
     void SetFoundationsDebt(CAmount debt);
+private:
+    struct FoundersDebt { static const unsigned char prefix; };
 };
 
 class CTeamView : public virtual CStorageView
@@ -178,8 +182,10 @@ public:
     boost::optional<CTeam> GetAuthTeam(int height) const;
     boost::optional<CTeam> GetConfirmTeam(int height) const;
 
+private:
     struct AuthTeam { static const unsigned char prefix; };
     struct ConfirmTeam { static const unsigned char prefix; };
+    struct CurrentTeam { static const unsigned char prefix; };
 };
 
 class CAnchorRewardsView : public virtual CStorageView

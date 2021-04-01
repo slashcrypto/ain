@@ -6,6 +6,7 @@
 #include <masternodes/anchors.h>
 #include <masternodes/criminals.h>
 #include <masternodes/mn_checks.h>
+#include <masternodes/masternodes_common.h>
 
 #include <chainparams.h>
 #include <net_processing.h>
@@ -20,28 +21,17 @@
 #include <functional>
 #include <unordered_map>
 
-/// @attention make sure that it does not overlap with those in tokens.cpp !!!
-// Prefixes for the 'custom chainstate database' (customsc/)
-const unsigned char DB_MASTERNODES = 'M';     // main masternodes table
-const unsigned char DB_MN_OPERATORS = 'o';    // masternodes' operators index
-const unsigned char DB_MN_OWNERS = 'w';       // masternodes' owners index
-const unsigned char DB_MN_STAKER = 'X';       // masternodes' last staked block time
-const unsigned char DB_MN_HEIGHT = 'H';       // single record with last processed chain height
-const unsigned char DB_MN_ANCHOR_REWARD = 'r';
-const unsigned char DB_MN_ANCHOR_CONFIRM = 'x';
-const unsigned char DB_MN_CURRENT_TEAM = 't';
-const unsigned char DB_MN_FOUNDERS_DEBT = 'd';
-const unsigned char DB_MN_AUTH_TEAM = 'v';
-const unsigned char DB_MN_CONFIRM_TEAM = 'V';
-
-const unsigned char CMasternodesView::ID      ::prefix = DB_MASTERNODES;
-const unsigned char CMasternodesView::Operator::prefix = DB_MN_OPERATORS;
-const unsigned char CMasternodesView::Owner   ::prefix = DB_MN_OWNERS;
-const unsigned char CMasternodesView::Staker  ::prefix = DB_MN_STAKER;
-const unsigned char CAnchorRewardsView::BtcTx ::prefix = DB_MN_ANCHOR_REWARD;
-const unsigned char CAnchorConfirmsView::BtcTx::prefix = DB_MN_ANCHOR_CONFIRM;
-const unsigned char CTeamView::AuthTeam       ::prefix = DB_MN_AUTH_TEAM;
-const unsigned char CTeamView::ConfirmTeam    ::prefix = DB_MN_CONFIRM_TEAM;
+const unsigned char CMasternodesView::ID::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesMasternodeId);
+const unsigned char CMasternodesView::Operator::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesMnOperator);
+const unsigned char CMasternodesView::Owner::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesMnOwner);
+const unsigned char CMasternodesView::Staker::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesMnStaker);
+const unsigned char CAnchorRewardsView::BtcTx::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesAnchorReward);
+const unsigned char CAnchorConfirmsView::BtcTx::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesAnchorConfirm);
+const unsigned char CTeamView::AuthTeam::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesAuthTeam);
+const unsigned char CTeamView::ConfirmTeam::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesConfirmTeam);
+const unsigned char CTeamView::CurrentTeam::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesCurrentTeam);
+const unsigned char CLastHeightView::LastHeight::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesLastHeight);
+const unsigned char CFoundationsDebtView::FoundersDebt::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesFoundersDebt);
 
 struct MNBlockTimeKey
 {
@@ -459,14 +449,14 @@ void CMasternodesView::EraseMasternodeLastBlockTime(const uint256& nodeId, const
 int CLastHeightView::GetLastHeight() const
 {
     int result;
-    if (Read(DB_MN_HEIGHT, result))
+    if (Read(LastHeight::prefix, result))
         return result;
     return 0;
 }
 
 void CLastHeightView::SetLastHeight(int height)
 {
-    Write(DB_MN_HEIGHT, height);
+    Write(LastHeight::prefix, height);
 }
 
 /*
@@ -475,7 +465,7 @@ void CLastHeightView::SetLastHeight(int height)
 CAmount CFoundationsDebtView::GetFoundationsDebt() const
 {
     CAmount debt(0);
-    if(Read(DB_MN_FOUNDERS_DEBT, debt))
+    if(Read(FoundersDebt::prefix, debt))
         assert(debt >= 0);
     return debt;
 }
@@ -483,7 +473,7 @@ CAmount CFoundationsDebtView::GetFoundationsDebt() const
 void CFoundationsDebtView::SetFoundationsDebt(CAmount debt)
 {
     assert(debt >= 0);
-    Write(DB_MN_FOUNDERS_DEBT, debt);
+    Write(FoundersDebt::prefix, debt);
 }
 
 
@@ -492,13 +482,13 @@ void CFoundationsDebtView::SetFoundationsDebt(CAmount debt)
  */
 void CTeamView::SetTeam(const CTeamView::CTeam & newTeam)
 {
-    Write(DB_MN_CURRENT_TEAM, newTeam);
+    Write(CurrentTeam::prefix, newTeam);
 }
 
 CTeamView::CTeam CTeamView::GetCurrentTeam() const
 {
     CTeam team;
-    if (Read(DB_MN_CURRENT_TEAM, team) && team.size() > 0)
+    if (Read(CurrentTeam::prefix, team) && team.size() > 0)
         return team;
 
     return Params().GetGenesisTeam();

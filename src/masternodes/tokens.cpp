@@ -3,6 +3,7 @@
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 
 #include <masternodes/tokens.h>
+#include <masternodes/masternodes_common.h>
 
 #include <amount.h>
 #include <core_io.h>
@@ -11,10 +12,10 @@
 #include <univalue.h>
 
 /// @attention make sure that it does not overlap with other views !!!
-const unsigned char CTokensView::ID          ::prefix = 'T';
-const unsigned char CTokensView::Symbol      ::prefix = 'S';
-const unsigned char CTokensView::CreationTx  ::prefix = 'c';
-const unsigned char CTokensView::LastDctId   ::prefix = 'L';
+const unsigned char CTokensView::ID::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesTokensId);
+const unsigned char CTokensView::Symbol::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesTokensSymbol);
+const unsigned char CTokensView::CreationTx::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesTokensCreationTx);
+const unsigned char CTokensView::LastDctId::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesTokensLastDctId);
 
 const DCT_ID CTokensView::DCT_ID_START = DCT_ID{128};
 

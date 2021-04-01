@@ -3,9 +3,10 @@
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 
 #include <masternodes/undos.h>
+#include <masternodes/masternodes_common.h>
 
 /// @attention make sure that it does not overlap with those in masternodes.cpp/tokens.cpp/undos.cpp/accounts.cpp !!!
-const unsigned char CUndosView::ByUndoKey::prefix = 'u';
+const unsigned char CUndosView::ByUndoKey::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesUndosByUndoKey);
 
 void CUndosView::ForEachUndo(std::function<bool(UndoKey, CLazySerialize<CUndo>)> callback, UndoKey const & start) const
 {

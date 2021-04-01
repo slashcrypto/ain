@@ -6,11 +6,12 @@
 #include <masternodes/poolpairs.h>
 #include <core_io.h>
 #include <primitives/transaction.h>
+#include <masternodes/masternodes_common.h>
 
-const unsigned char CPoolPairView::ByID          ::prefix = 'i';
-const unsigned char CPoolPairView::ByPair        ::prefix = 'j';
-const unsigned char CPoolPairView::ByShare       ::prefix = 'k';
-const unsigned char CPoolPairView::Reward        ::prefix = 'I';
+const unsigned char CPoolPairView::ByID::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesPoolPairById);
+const unsigned char CPoolPairView::ByPair::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesPoolPairByPair);
+const unsigned char CPoolPairView::ByShare::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesPoolPairByShare);
+const unsigned char CPoolPairView::Reward::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesPoolPairReward);
 
 Res CPoolPairView::SetPoolPair(DCT_ID const & poolId, CPoolPair const & pool)
 {

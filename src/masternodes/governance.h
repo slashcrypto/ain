@@ -29,20 +29,28 @@ enum class CfrVoteType : unsigned char {
 };
 
 struct CCreateCfrMessage {
+    CScript address;
     CAmount amount;
     uint8_t period;
+    uint8_t votingSkipPeriod;
+
+    ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action)
     {
+        READWRITE(address);
         READWRITE(amount);
         READWRITE(period);
+        READWRITE(votingSkipPeriod);
     }
 };
 
 struct CVoteCfrMessage {
     CCfrId      cfrId;
-    CfrVoteType voteType;
+    uint8_t     voteType;
+
+    ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action)
@@ -54,7 +62,9 @@ struct CVoteCfrMessage {
 
 struct CCfrVote {
     int64_t     voteTimestamp;
-    CfrVoteType voteType;
+    uint8_t     voteType;
+
+    ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action)
@@ -66,8 +76,10 @@ struct CCfrVote {
 
 struct CCfrObjectKey
 {
-    CfrStatus status; // key flag for sorting of processed and unprocessed CFRs objects, this should speed up the search when processing
+    uint8_t   status; // key flag for sorting of processed and unprocessed CFRs objects, this should speed up the search when processing
     uint256   cfrId;
+
+    ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action)
@@ -79,20 +91,24 @@ struct CCfrObjectKey
 
 struct CCfrObject
 {
-    uint8_t period;
-    uint8_t processedPeriodCount;
     CAmount amount;
     CScript address;
-    // Voting map: key - masternode address, value - vote
-    std::map<CScript, CCfrVote> votingMap;
+    uint8_t period;
+    uint8_t processedPeriodCount;
+    int     finalizeBlockHeight;
+    // Voting map: key - masternode ID, value - vote
+    std::map<uint256, CCfrVote> votingMap;
+
+    ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action)
     {
-        READWRITE(period);
-        READWRITE(processedPeriodCount);
         READWRITE(amount);
         READWRITE(address);
+        READWRITE(period);
+        READWRITE(processedPeriodCount);
+        READWRITE(finalizeBlockHeight);
         READWRITE(votingMap);
     }
 };
@@ -111,7 +127,7 @@ public:
 
     Res UpdateCfrStatus(const CCfrObjectKey& key, const CfrStatus newStatus);
 
-    Res AddCfrVote(const CCfrId& cfrId, const CScript& masternodeAddress, const CCfrVote& vote);
+    Res AddCfrVote(const CCfrId& cfrId, const uint256& masternodeId, const CCfrVote& vote);
 
     std::set<CCfrId> GetCfrIdsForPaying() const;
 

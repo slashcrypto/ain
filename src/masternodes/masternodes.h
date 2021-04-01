@@ -17,7 +17,7 @@
 #include <masternodes/undos.h>
 #include <masternodes/poolpairs.h>
 #include <masternodes/oracles.h>
-#include <masternodes/cfr.h>
+#include <masternodes/governance.h>
 #include <masternodes/gv.h>
 #include <uint256.h>
 #include <wallet/ismine.h>

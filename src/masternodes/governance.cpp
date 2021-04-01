@@ -73,7 +73,7 @@ Res CCfrView::UpdateCfrStatus(const CCfrObjectKey& key, const CfrStatus newStatu
     return Res::Ok();
 }
 
-Res CCfrView::AddCfrVote(const CCfrId& cfrId, const CScript& masternodeAddress, const CCfrVote& vote)
+Res CCfrView::AddCfrVote(const CCfrId& cfrId, const uint256& masternodeId, const CCfrVote& vote)
 {
     const CCfrObjectKey key{CfrStatus::CfrStatusVoting, cfrId};
 
@@ -85,7 +85,7 @@ Res CCfrView::AddCfrVote(const CCfrId& cfrId, const CScript& masternodeAddress, 
 
     CCfrObject& value = *ret.val;
 
-    value.votingMap.emplace(masternodeAddress, vote);
+    value.votingMap.emplace(masternodeId, vote);
 
     if(!WriteBy<CfrPrefix>(key, value)) {
         return Res::Err("Failed to add vote for CFR <%s> with status <%s>", key.cfrId.GetHex(), CfrStatusToString(key.status));

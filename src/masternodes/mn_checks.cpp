@@ -1717,7 +1717,7 @@ Res ApplySetOracleDataTx(CCustomCSView &mnview,
     return Res::Ok();
 }
 
-Res ApplyCreateCfrTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth = false, UniValue* rpcInfo = nullptr)
+Res ApplyCreateCfrTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth, UniValue* rpcInfo)
 {
     constexpr auto base = "Create cfr";
 
@@ -1727,7 +1727,7 @@ Res ApplyCreateCfrTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTra
 
     return Res::Ok(base);
 }
-Res ApplyVoteCfrTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth = false, UniValue* rpcInfo = nullptr)
+Res ApplyVoteCfrTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth, UniValue* rpcInfo)
 {
     constexpr auto base = "Vote cfr";
 

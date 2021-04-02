@@ -17,7 +17,7 @@
 #include <masternodes/undos.h>
 #include <masternodes/poolpairs.h>
 #include <masternodes/oracles.h>
-#include <masternodes/governance.h>
+#include <masternodes/proposals.h>
 #include <masternodes/gv.h>
 #include <uint256.h>
 #include <wallet/ismine.h>
@@ -233,7 +233,7 @@ class CCustomCSView
         , public CGovView
         , public CAnchorConfirmsView
         , public COracleView
-        , public CCfrView
+        , public CProposalsView
 {
 public:
     CCustomCSView() = default;

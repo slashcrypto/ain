@@ -11,10 +11,11 @@
 #include <amount.h>
 #include <serialize.h>
 #include <uint256.h>
+#include <type_traits>
 
 using CCfrId = uint256;
 
-enum class CfrStatus : unsigned char {
+enum class CfrStatus : uint8_t {
   CfrStatusVoting    = 0x01,
   CfrStatusRejected  = 0x02,
   CfrStatusCompleted = 0x03
@@ -22,7 +23,7 @@ enum class CfrStatus : unsigned char {
 
 std::string CfrStatusToString(const CfrStatus status);
 
-enum class CfrVoteType : unsigned char {
+enum class CfrVoteType : uint8_t {
   CfrVoteTypeYes     = 0x01,
   CfrVoteTypeNo      = 0x02,
   CfrVoteTypeNeutral = 0x03
@@ -48,7 +49,7 @@ struct CCreateCfrMessage {
 
 struct CVoteCfrMessage {
     CCfrId      cfrId;
-    uint8_t     voteType;
+    CfrVoteType voteType;
 
     ADD_SERIALIZE_METHODS;
 
@@ -56,13 +57,21 @@ struct CVoteCfrMessage {
     inline void SerializationOp(Stream& s, Operation ser_action)
     {
         READWRITE(cfrId);
-        READWRITE(voteType);
+        uint8_t voteTypeByte;
+        if (ser_action.ForRead()) {
+            READWRITE(voteTypeByte);
+            voteType = static_cast<CfrVoteType>(voteTypeByte);
+        }
+        else {
+            voteTypeByte = static_cast<uint8_t>(voteType);
+            READWRITE(voteTypeByte);
+        }
     }
 };
 
 struct CCfrVote {
     int64_t     voteTimestamp;
-    uint8_t     voteType;
+    CfrVoteType voteType;
 
     ADD_SERIALIZE_METHODS;
 
@@ -70,13 +79,21 @@ struct CCfrVote {
     inline void SerializationOp(Stream& s, Operation ser_action)
     {
         READWRITE(voteTimestamp);
-        READWRITE(voteType);
+        uint8_t voteTypeByte;
+        if (ser_action.ForRead()) {
+            READWRITE(voteTypeByte);
+            voteType = static_cast<CfrVoteType>(voteTypeByte);
+        }
+        else {
+            voteTypeByte = static_cast<uint8_t>(voteType);
+            READWRITE(voteTypeByte);
+        }
     }
 };
 
 struct CCfrObjectKey
 {
-    uint8_t   status; // key flag for sorting of processed and unprocessed CFRs objects, this should speed up the search when processing
+    CfrStatus status; // key flag for sorting of processed and unprocessed CFRs objects, this should speed up the search when processing
     uint256   cfrId;
 
     ADD_SERIALIZE_METHODS;
@@ -84,7 +101,15 @@ struct CCfrObjectKey
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action)
     {
-        READWRITE(status);
+        uint8_t statusByte;
+        if (ser_action.ForRead()) {
+            READWRITE(statusByte);
+            status = static_cast<CfrVoteType>(statusByte);
+        }
+        else {
+            statusByte = static_cast<uint8_t>(status);
+            READWRITE(statusByte);
+        }
         READWRITE(cfrId);
     }
 };
@@ -113,13 +138,13 @@ struct CCfrObject
     }
 };
 
-/// View for managing CFRs and their data
-class CCfrView : public virtual CStorageView
+/// View for managing proposals and their data
+class CProposalsView : public virtual CStorageView
 {
 public:
-    CCfrView() : _cfrIdsForPayingKey{"cfridsforpaying"} {}
+    CProposalsView() : _cfrIdsForPayingKey{"cfridsforpaying"} {}
 
-    ~CCfrView() override = default;
+    ~CProposalsView() override = default;
 
     Res CreateCfr(const CCfrId& cfrId, const CScript& address, const CAmount& amount, const uint8_t period);
 
@@ -141,7 +166,7 @@ private:
     struct CfrPrefix {
         static const unsigned char prefix;
     };
-    struct IdsForPayingPrefix {
+    struct CfrIdsForPayingPrefix {
         static const unsigned char prefix;
     };
 

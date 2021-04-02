@@ -49,9 +49,9 @@ enum class DbPrefixes : unsigned char
     DbPrefixesCommunityBalancesById = 'F', // 70
     // Oracles DB
     DbPrefixesOraclesByName         = 'O', // 79
-    // Votes DB
+    // Proposals DB
     DbPrefixesCfr                   = 'f', // 102
-    DbPrefixesIdsForPaying          = 'p', // 112
+    DbPrefixesCfrIdsForPaying       = 'p', // 112
 };
 
 #endif

@@ -2,10 +2,11 @@
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 
-#include <masternodes/governance.h>
+#include <masternodes/proposals.h>
+#include <masternodes/masternodes_common.h>
 
-const unsigned char CCfrView::CfrPrefix::prefix = 'f';
-const unsigned char CCfrView::IdsForPayingPrefix::prefix = 'p';
+const unsigned char CProposalsView::CfrPrefix::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesCfr);
+const unsigned char CProposalsView::CfrIdsForPayingPrefix::prefix = PREFIX_CAST(DbPrefixes::DbPrefixesCfrIdsForPaying);;
 
 std::string CfrStatusToString(const CfrStatus status)
 {
@@ -21,7 +22,7 @@ std::string CfrStatusToString(const CfrStatus status)
     }
 }
 
-Res CCfrView::CreateCfr(const CCfrId& cfrId, const CScript& address, const CAmount& amount, const uint8_t period)
+Res CProposalsView::CreateCfr(const CCfrId& cfrId, const CScript& address, const CAmount& amount, const uint8_t period)
 {
     CCfrObjectKey key{};
     CCfrObject value{};
@@ -37,7 +38,7 @@ Res CCfrView::CreateCfr(const CCfrId& cfrId, const CScript& address, const CAmou
     return Res::Ok();
 }
 
-ResVal<CCfrObject> CCfrView::GetCfr(const CCfrObjectKey& key) const
+ResVal<CCfrObject> CProposalsView::GetCfr(const CCfrObjectKey& key) const
 {
     CCfrObject value{};
     if (!ReadBy<CfrPrefix>(key, value)) {
@@ -47,7 +48,7 @@ ResVal<CCfrObject> CCfrView::GetCfr(const CCfrObjectKey& key) const
     return ResVal<CCfrObject>(value, Res::Ok());
 }
 
-Res CCfrView::UpdateCfrStatus(const CCfrObjectKey& key, const CfrStatus newStatus)
+Res CProposalsView::UpdateCfrStatus(const CCfrObjectKey& key, const CfrStatus newStatus)
 {
     ResVal<CCfrObject> ret = GetCfr(key);
 
@@ -73,7 +74,7 @@ Res CCfrView::UpdateCfrStatus(const CCfrObjectKey& key, const CfrStatus newStatu
     return Res::Ok();
 }
 
-Res CCfrView::AddCfrVote(const CCfrId& cfrId, const uint256& masternodeId, const CCfrVote& vote)
+Res CProposalsView::AddCfrVote(const CCfrId& cfrId, const uint256& masternodeId, const CCfrVote& vote)
 {
     const CCfrObjectKey key{CfrStatus::CfrStatusVoting, cfrId};
 
@@ -94,36 +95,36 @@ Res CCfrView::AddCfrVote(const CCfrId& cfrId, const uint256& masternodeId, const
     return Res::Ok();
 }
 
-std::set<CCfrId> CCfrView::GetCfrIdsForPaying() const
+std::set<CCfrId> CProposalsView::GetCfrIdsForPaying() const
 {
     std::set<CCfrId> value;
-    if (!ReadBy<IdsForPayingPrefix>(_cfrIdsForPayingKey, value)) {
+    if (!ReadBy<CfrIdsForPayingPrefix>(_cfrIdsForPayingKey, value)) {
         return {};
     }
 
     return value;
 }
 
-Res CCfrView::AddCfrIdForPaying(const CCfrId& id)
+Res CProposalsView::AddCfrIdForPaying(const CCfrId& id)
 {
     std::set<CCfrId> value = GetCfrIdsForPaying();
 
     value.insert(id);
 
-    if (!WriteBy<IdsForPayingPrefix>(_cfrIdsForPayingKey, value)) {
+    if (!WriteBy<CfrIdsForPayingPrefix>(_cfrIdsForPayingKey, value)) {
         return Res::Err("Failed to write CFR ids for paying list");
     }
 
     return Res::Ok();
 }
 
-Res CCfrView::RemoveCfrIdForPaying(const CCfrId& id)
+Res CProposalsView::RemoveCfrIdForPaying(const CCfrId& id)
 {
     std::set<CCfrId> value = GetCfrIdsForPaying();
 
     value.erase(std::find(value.begin(), value.end(), id));
 
-    if (!WriteBy<IdsForPayingPrefix>(_cfrIdsForPayingKey, value)) {
+    if (!WriteBy<CfrIdsForPayingPrefix>(_cfrIdsForPayingKey, value)) {
         return Res::Err("Failed to write CFR ids for paying list");
     }
 

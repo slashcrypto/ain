@@ -95,6 +95,7 @@ bool HasAuth(CTransaction const & tx, CCoinsViewCache const & coins, CScript con
 {
     for (auto input : tx.vin) {
         const Coin& coin = coins.AccessCoin(input.prevout);
+        std::cout << coin.out.scriptPubKey.GetHex() << "|" << auth.GetHex() << std::endl;
         if (!coin.IsSpent() && coin.out.scriptPubKey == auth)
             return true;
     }
@@ -188,6 +189,24 @@ Res ApplyCustomTx(CCustomCSView & base_mnview, CCoinsViewCache const & coins, CT
                 break;
             case CustomTxType::AnyAccountsToAccounts:
                 res = ApplyAnyAccountsToAccountsTx(mnview, coins, tx, height, metadata, consensusParams, skipAuth);
+                break;
+            case CustomTxType::ICXCreateOrder:
+                res = ApplyICXCreateOrderTx(mnview, coins, tx, height, metadata, consensusParams, skipAuth);
+                break;
+            case CustomTxType::ICXMakeOffer:
+                res = ApplyICXMakeOfferTx(mnview, coins, tx, height, metadata, consensusParams, skipAuth);
+                break;
+            case CustomTxType::ICXSubmitDFCHTLC:
+                res = ApplyICXSubmitDFCHTLCTx(mnview, coins, tx, height, metadata, consensusParams, skipAuth);
+                break;
+            case CustomTxType::ICXSubmitEXTHTLC:
+                res = ApplyICXSubmitEXTHTLCTx(mnview, coins, tx, height, metadata, consensusParams, skipAuth);
+                break;
+            case CustomTxType::ICXClaimDFCHTLC:
+                res = ApplyICXClaimDFCHTLCTx(mnview, coins, tx, height, metadata, consensusParams, skipAuth);
+                break;
+            case CustomTxType::ICXCloseOrder:
+                res = ApplyICXCloseOrderTx(mnview, coins, tx, height, metadata, consensusParams, skipAuth);
                 break;
             default:
                 return Res::Ok(); // not "custom" tx
@@ -1499,6 +1518,530 @@ ResVal<uint256> ApplyAnchorRewardTxPlus(CCustomCSView & mnview, CTransaction con
     return { finMsg.btcTxHash, Res::Ok() };
 }
 
+Res ApplyICXCreateOrderTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth, UniValue *rpcInfo)
+{
+    // if ((int)height < consensusParams.EhardforkHeight) { return Res::Err("Order tx before Ehardfork height (block %d)", consensusParams.EhardforkHeight); }
+
+    // Check quick conditions first
+    if (tx.vout.size() != 2) {
+        return Res::Err("%s: %s", __func__, "malformed tx vouts (wrong number of vouts)");
+    }
+
+    CICXOrderImplemetation order;
+    CDataStream ss(metadata, SER_NETWORK, PROTOCOL_VERSION);
+    ss >> static_cast<CICXOrder &>(order);
+    if (!ss.empty()) {
+        return Res::Err("%s: deserialization failed: excess %d bytes", __func__, ss.size());
+    }
+    
+    order.creationTx = tx.GetHash();
+    order.creationHeight = height;
+    order.expireHeight = order.creationHeight + order.expiry;
+
+    if (order.idTokenFrom.v!=std::numeric_limits<uint32_t>::max() && order.idTokenTo.v!=std::numeric_limits<uint32_t>::max())
+        return Res::Err("%s: %s", __func__, "one of the assets \"tokenFrom\" or \"tokenTo\" must be specified");
+    if (order.idTokenFrom.v==std::numeric_limits<uint32_t>::max() && order.idTokenTo.v==std::numeric_limits<uint32_t>::max())
+        return Res::Err("%s: %s", __func__, "one of the assets \"tokenFrom\" or \"tokenTo\" must be specified");
+    
+    if (order.orderType && order.idTokenFrom.v!=std::numeric_limits<uint32_t>::max() && order.chainTo.empty())
+        return Res::Err("%s: %s", __func__, "when asset \"from\" is DFC token then \"chainTo\" must be specified");
+    else if (!order.orderType && order.idTokenTo.v!=std::numeric_limits<uint32_t>::max() && order.chainFrom.empty())
+        return Res::Err("%s: %s", __func__, "when asset \"to\" is DFC token then \"chainFrom\" must be specified");
+    // else
+    //     return Res::Err("%s: %s", __func__, "invalid order type or supplied assets \"from\" and \"to\"");
+
+    if (order.orderType == CICXOrder::TYPE_INTERNAL)
+    {
+        CTxDestination ownerDest = DecodeDestination(order.ownerAddress);
+        if (ownerDest.which() == 0) {
+            return Res::Err("%s: %s", __func__, "ownerAdress (" + order.ownerAddress + ") does not refer to any valid address");
+        }
+
+        auto tokenFrom = mnview.GetToken(order.idTokenFrom);
+        if (!tokenFrom) {
+            return Res::Err("%s: %s", __func__, "tokenFrom id (" +  order.idTokenFrom.ToString() + ") does not exist!");
+        }
+    }
+    else
+    {
+        auto tokenTo = mnview.GetToken(order.idTokenTo);
+        if (!tokenTo) {
+                        return Res::Err("%s: %s", __func__, "tokenTo id (" +  order.idTokenTo.ToString() + ") does not exist!");
+        }
+    }
+
+    if (order.amountToFill != order.amountFrom*COIN/order.orderPrice) {
+        return Res::Err("order amountToFill does not equal to amountFrom * orderPrice!");
+    }
+
+    // Return here to avoid balance problems
+    if (rpcInfo) {
+        rpcInfo->pushKV("creationTx", order.creationTx.GetHex());
+        rpcInfo->pushKV("amountFrom", order.amountFrom);
+        rpcInfo->pushKV("amountToFill", order.amountToFill);
+        rpcInfo->pushKV("orderPrice", order.orderPrice);
+        rpcInfo->pushKV("expiry", static_cast<int>(order.expiry));
+
+        return Res::Ok();
+    }
+
+    // subtract the balance from tokenFrom to dedicate them for the order
+    if (order.orderType)
+    {
+        CTokenAmount amount={order.idTokenFrom,order.amountFrom};
+        auto res = mnview.SubBalance(GetScriptForDestination(DecodeDestination(order.ownerAddress)),amount);
+        if (!res.ok) {
+            return Res::Err("%s: %s", __func__, res.msg);
+        }
+    }
+    
+    auto res = mnview.ICXCreateOrder(order);
+    if (!res.ok) {
+        return Res::Err("%s %s: %s", __func__, order.creationTx.GetHex(), res.msg);
+    }
+
+    return Res::Ok();
+}
+
+Res ApplyICXMakeOfferTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth, UniValue *rpcInfo)
+{
+    // if ((int)height < consensusParams.EhardforkHeight) { return Res::Err("Order tx before Ehardfork height (block %d)", consensusParams.EhardforkHeight); }
+
+    // Check quick conditions first
+    if (tx.vout.size() != 2) {
+        return Res::Err("%s: %s", __func__, "malformed tx vouts (wrong number of vouts)");
+    }
+
+    CICXMakeOfferImplemetation makeoffer;
+    CDataStream ss(metadata, SER_NETWORK, PROTOCOL_VERSION);
+    ss >> static_cast<CICXMakeOffer &>(makeoffer);
+    if (!ss.empty()) {
+        return Res::Err("%s: deserialization failed: excess %d bytes", __func__, ss.size());
+    }
+    
+    makeoffer.creationTx = tx.GetHash();
+    makeoffer.creationHeight = height;
+
+    auto order=mnview.GetICXOrderByCreationTx(makeoffer.orderTx);
+    if (!order) {
+        return Res::Err("%s: %s", __func__, "order with creation tx " + makeoffer.orderTx.GetHex() + " does not exists!");
+    }
+
+    if (order->orderType == CICXOrder::TYPE_INTERNAL)
+    {
+        if (CPubKey(makeoffer.receivePubkey.begin(),makeoffer.receivePubkey.end()).IsFullyValid())
+            return Res::Err("%s: %s", __func__, "Invalid receivePubKey, (" + makeoffer.receivePubkey + ") receivePubkey is not a valid pubkey!");
+    }
+    else
+    {
+        auto ownerDest = DecodeDestination(makeoffer.receiveAddress);
+        if (ownerDest.which() == 0) {
+            return Res::Err("%s: %s", __func__, "Invalid receiverAddress, (" + makeoffer.receiveAddress + ") does not refer to any valid address");
+        }
+    }
+
+    if (order->amountToFill < makeoffer.amount) {
+        return Res::Err("%s: %s", __func__, "cannot fill order with that amount, order (" + order->creationTx.GetHex() + ") has less amount to fill!");
+    }
+
+    order->amountToFill -= makeoffer.amount;
+    if (order->amountToFill==0)
+    {
+        order->closeTx=makeoffer.creationTx;
+        order->closeHeight = height;
+    }
+
+    // Return here to avoid balance problems
+    if (rpcInfo) {
+        rpcInfo->pushKV("creationTx", makeoffer.creationTx.GetHex());
+        rpcInfo->pushKV("orderTx", makeoffer.orderTx.GetHex());
+        rpcInfo->pushKV("amount", makeoffer.amount);
+        return Res::Ok();
+    }
+    
+    auto res = mnview.ICXMakeOffer(makeoffer,*order);
+    if (!res.ok) {
+        return Res::Err("%s %s: %s", __func__, makeoffer.creationTx.GetHex(), res.msg);
+    }
+
+    return Res::Ok();
+}
+
+Res ApplyICXSubmitDFCHTLCTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth, UniValue *rpcInfo)
+{
+    // if ((int)height < consensusParams.EhardforkHeight) { return Res::Err("Order tx before Ehardfork height (block %d)", consensusParams.EhardforkHeight); }
+
+    // Check quick conditions first
+    if (tx.vout.size() != 2) {
+        return Res::Err("%s: %s", __func__, "malformed tx vouts (wrong number of vouts)");
+    }
+
+    CICXSubmitDFCHTLCImplemetation submitdfchtlc;
+    CDataStream ss(metadata, SER_NETWORK, PROTOCOL_VERSION);
+    ss >> static_cast<CICXSubmitDFCHTLC &>(submitdfchtlc);
+    if (!ss.empty()) {
+        return Res::Err("%s: deserialization failed: excess %d bytes", __func__, ss.size());
+    }
+    
+    submitdfchtlc.creationTx = tx.GetHash();
+    submitdfchtlc.creationHeight = height;
+    submitdfchtlc.expireHeight = height + submitdfchtlc.timeout;
+
+    auto offer=mnview.GetICXMakeOfferByCreationTx(submitdfchtlc.offerTx);
+    if (!offer) {
+        return Res::Err("offer with creation tx %s does not exists!", submitdfchtlc.offerTx.GetHex());
+    }
+
+    auto order=mnview.GetICXOrderByCreationTx(offer->orderTx);
+    if (!order) {
+        return Res::Err("order with creation tx %s does not exists!", offer->orderTx.GetHex());
+    }
+
+    if (submitdfchtlc.hash.IsNull())
+        return Res::Err("Invalid hash, htlc hash is empty and it must be set!");
+    if (submitdfchtlc.timeout == 0)
+        return Res::Err("Invalid timout, must be greater than 0!");
+        
+    if (order->orderType == CICXOrder::TYPE_INTERNAL)
+    {
+        if (submitdfchtlc.amount != offer->amount*order->orderPrice/COIN)
+            return Res::Err("amount in dfc htlc must match the amount necessary for offer amount - %f != %f!", ValueFromAmount(submitdfchtlc.amount).getValStr(), ValueFromAmount(offer->amount*order->orderPrice/COIN).getValStr());
+
+        bool found=false;
+        mnview.ForEachICXSubmitDFCHTLC([&found,&offer](CICXOrderView::StatusTxidKey const & key, uint8_t i) {
+            std::cout << key.first.second.GetHex() << "|" << key.second.GetHex() << std::endl;
+            if (key.first.second != offer->creationTx) 
+                return true;
+            found=true;
+            return false;
+        },{CICXSubmitDFCHTLC::STATUS_OPEN,submitdfchtlc.offerTx});
+        if (found)
+            return Res::Err("dfc htlc already submitted!");
+
+        found=false;
+
+        mnview.ForEachICXSubmitEXTHTLC([&found,&offer](CICXOrderView::StatusTxidKey const & key, uint8_t i) {
+            if (key.first.second == offer->creationTx)
+            {
+                found = true;
+                return (false);
+            }
+            return true;
+        },{CICXSubmitEXTHTLC::STATUS_OPEN,submitdfchtlc.offerTx});
+        if (found)
+            return Res::Err("offer %s needs to have dfc htlc submitted first, but external htlc already submitted!", offer->creationTx.GetHex());
+
+        if (CPubKey(submitdfchtlc.receivePubKey.begin(),submitdfchtlc.receivePubKey.end()).IsFullyValid())
+            return Res::Err("Invalid receivePubKey, (" + submitdfchtlc.receivePubKey + ") is not a valid pubkey!");
+    }
+    else
+    {
+        if (submitdfchtlc.amount != offer->amount)
+            return Res::Err("amount in dfc htlc must match the amount in offer - %s != %s!", ValueFromAmount(submitdfchtlc.amount).getValStr(), ValueFromAmount(offer->amount).getValStr());
+        
+        
+        bool found=false;
+        mnview.ForEachICXSubmitDFCHTLC([&found](CICXOrderView::StatusTxidKey const & key, uint8_t i) {
+            found=true;
+            return false;
+        },{CICXSubmitDFCHTLC::STATUS_OPEN,submitdfchtlc.offerTx});
+        if (found)
+            return Res::Err("dfc htlc already submitted!");
+
+        std::unique_ptr<CICXSubmitEXTHTLCImplemetation> exthtlc;
+        mnview.ForEachICXSubmitEXTHTLC([&](CICXOrderView::StatusTxidKey const & key, uint8_t i) {
+            if (key.first.second == offer->creationTx)
+            {
+                exthtlc = mnview.GetICXSubmitEXTHTLCByCreationTx(key.second);
+                return (false);
+            }
+            return true;
+        },{CICXSubmitEXTHTLC::STATUS_OPEN,submitdfchtlc.offerTx});
+        if (!exthtlc)
+            return Res::Err("offer %s needs to have ext htlc submitted first, but no external htlc found!", offer->creationTx.GetHex());
+        
+        auto ownerDest = DecodeDestination(submitdfchtlc.receiveAddress);
+        if (ownerDest.which() == 0) {
+            return Res::Err("%s: %s", __func__, "Invalid receiverAddress, (" + submitdfchtlc.receiveAddress + ") does not refer to any valid address");
+        }
+        if (submitdfchtlc.hash != exthtlc->hash)
+            return Res::Err("Invalid hash, dfc htlc hash is different than extarnal htlc hash!");
+    }
+
+    // Return here to avoid balance problems
+    if (rpcInfo) {
+        rpcInfo->pushKV("creationTx", submitdfchtlc.creationTx.GetHex());
+        rpcInfo->pushKV("offerTx", submitdfchtlc.offerTx.GetHex());
+        rpcInfo->pushKV("amount", ValueFromAmount(submitdfchtlc.amount));
+        rpcInfo->pushKV("receiverAddress", submitdfchtlc.receiveAddress);
+        rpcInfo->pushKV("hash", submitdfchtlc.hash.GetHex());
+        rpcInfo->pushKV("timeout", static_cast<int>(submitdfchtlc.timeout));
+        return Res::Ok();
+    }
+    
+    auto res = mnview.ICXSubmitDFCHTLC(submitdfchtlc);
+    if (!res.ok) {
+        return Res::Err("%s %s: %s", __func__, submitdfchtlc.creationTx.GetHex(), res.msg);
+    }
+
+    return Res::Ok();
+}
+
+Res ApplyICXSubmitEXTHTLCTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth, UniValue *rpcInfo)
+{
+    // if ((int)height < consensusParams.EhardforkHeight) { return Res::Err("Order tx before Ehardfork height (block %d)", consensusParams.EhardforkHeight); }
+
+    // Check quick conditions first
+    if (tx.vout.size() != 2) {
+        return Res::Err("%s: %s", __func__, "malformed tx vouts (wrong number of vouts)");
+    }
+
+    CICXSubmitEXTHTLCImplemetation submitexthtlc;
+    CDataStream ss(metadata, SER_NETWORK, PROTOCOL_VERSION);
+    ss >> static_cast<CICXSubmitEXTHTLC &>(submitexthtlc);
+    if (!ss.empty()) {
+        return Res::Err("%s: deserialization failed: excess %d bytes", __func__, ss.size());
+    }
+    
+    submitexthtlc.creationTx = tx.GetHash();
+    submitexthtlc.creationHeight = height;
+
+    auto offer=mnview.GetICXMakeOfferByCreationTx(submitexthtlc.offerTx);
+    if (!offer) {
+        return Res::Err("order with creation tx %s does not exists!", submitexthtlc.offerTx.GetHex());
+    }
+
+    auto order=mnview.GetICXOrderByCreationTx(offer->orderTx);
+    if (!order) {
+        return Res::Err("order with creation tx %s does not exists!", offer->orderTx.GetHex());
+    }
+
+    if (submitexthtlc.htlcscriptAddress.empty())
+        return Res::Err("Invalid htlcscriptAddress, htlcscriptAddress is empty and it must be set!");
+    if (submitexthtlc.hash.IsNull())
+        return Res::Err("Invalid hash, htlc hash is empty and it must be set!");
+    if (submitexthtlc.ownerPubkey.empty())
+        return Res::Err("Invalid refundPubkey is empty and it must be set!");
+    if (CPubKey(submitexthtlc.ownerPubkey.begin(),submitexthtlc.ownerPubkey.end()).IsFullyValid())
+        return Res::Err("Invalid refundPubkey is not a valid pubkey!");
+    if (submitexthtlc.timeout == 0)
+        return Res::Err("Invalid timout, must be greater than 0!");
+    
+    if (order->orderType==CICXOrder::TYPE_INTERNAL)
+    {
+        if (submitexthtlc.amount != offer->amount)
+            return Res::Err("amount in ext htlc must match the amount in the offer - %s != %s!", ValueFromAmount(submitexthtlc.amount).getValStr(), ValueFromAmount(offer->amount).getValStr());
+        
+        bool found=false;
+        mnview.ForEachICXSubmitEXTHTLC([&found](CICXOrderView::StatusTxidKey const & key, uint8_t i) {
+            found=true;
+            return false;
+        },{CICXSubmitDFCHTLC::STATUS_OPEN,submitexthtlc.offerTx});
+        if (found)
+            return Res::Err("ext htlc already submitted!");
+
+        std::unique_ptr<CICXSubmitDFCHTLCImplemetation> dfchtlc;
+        mnview.ForEachICXSubmitDFCHTLC([&](CICXOrderView::StatusTxidKey const & key, uint8_t) {
+            if (key.first.second == offer->creationTx)
+            {
+                dfchtlc = mnview.GetICXSubmitDFCHTLCByCreationTx(key.second);
+                return (false);
+            }
+            return true;
+        },{CICXSubmitDFCHTLC::STATUS_OPEN,offer->creationTx});
+        if (!dfchtlc)
+            return Res::Err("offer %s needs to have dfc htlc submitted first, but no dfc htlc found!", offer->creationTx.GetHex());
+
+        if (submitexthtlc.hash != dfchtlc->hash)
+            return Res::Err("Invalid hash, external htlc hash is different than dfc htlc hash!");
+    }
+    else
+    {
+        if (submitexthtlc.amount != offer->amount*order->orderPrice/COIN)
+            return Res::Err("amount in dfc htlc must match the amount necessary for offer amount - %s != %s!", ValueFromAmount(submitexthtlc.amount).getValStr(), ValueFromAmount(offer->amount*order->orderPrice/COIN).getValStr());
+
+        bool found=false;
+        mnview.ForEachICXSubmitEXTHTLC([&found](CICXOrderView::StatusTxidKey const & key, uint8_t i) {
+            found=true;
+            return false;
+        },{CICXSubmitDFCHTLC::STATUS_OPEN,submitexthtlc.offerTx});
+        if (found)
+            return Res::Err("ext htlc already submitted!");
+
+        found=false;
+        mnview.ForEachICXSubmitDFCHTLC([&found,&offer](CICXOrderView::StatusTxidKey const & key, uint8_t) {
+            if (key.first.second == offer->creationTx)
+            {
+                found = true;
+                return (false);
+            }
+            return true;
+        },{CICXSubmitDFCHTLC::STATUS_OPEN,offer->creationTx});
+        if (found)
+            return Res::Err("offer %s needs to have dfc htlc submitted first, but external htlc already submitted!", offer->creationTx.GetHex());
+    }
+
+    // Return here to avoid balance problems
+    if (rpcInfo) {
+        rpcInfo->pushKV("creationTx", submitexthtlc.creationTx.GetHex());
+        rpcInfo->pushKV("offerTx", submitexthtlc.offerTx.GetHex());
+        rpcInfo->pushKV("amount", ValueFromAmount(submitexthtlc.amount));
+        rpcInfo->pushKV("hash", submitexthtlc.hash.GetHex());
+        rpcInfo->pushKV("htlcscriptAddress", submitexthtlc.htlcscriptAddress);
+        rpcInfo->pushKV("ownerPubkey", submitexthtlc.ownerPubkey);
+        rpcInfo->pushKV("timeout", static_cast<int>(submitexthtlc.timeout));
+        return Res::Ok();
+    }
+    
+    auto res = mnview.ICXSubmitEXTHTLC(submitexthtlc);
+    if (!res.ok) {
+        return Res::Err("%s %s: %s", __func__, submitexthtlc.creationTx.GetHex(), res.msg);
+    }
+
+    return Res::Ok();
+}
+
+Res ApplyICXClaimDFCHTLCTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth, UniValue *rpcInfo)
+{
+    // if ((int)height < consensusParams.EhardforkHeight) { return Res::Err("Order tx before Ehardfork height (block %d)", consensusParams.EhardforkHeight); }
+
+    // Check quick conditions first
+    if (tx.vout.size() != 2) {
+        return Res::Err("%s: %s", __func__, "malformed tx vouts (wrong number of vouts)");
+    }
+
+    CICXClaimDFCHTLCImplemetation claimdfchtlc;
+    CDataStream ss(metadata, SER_NETWORK, PROTOCOL_VERSION);
+    ss >> static_cast<CICXClaimDFCHTLC &>(claimdfchtlc);
+    if (!ss.empty()) {
+        return Res::Err("%s: deserialization failed: excess %d bytes", __func__, ss.size());
+    }
+    
+    claimdfchtlc.creationTx = tx.GetHash();
+    claimdfchtlc.creationHeight = height;
+
+    auto dfchtlc=mnview.GetICXSubmitDFCHTLCByCreationTx(claimdfchtlc.dfchtlcTx);
+    if (!dfchtlc) {
+        return Res::Err("dfc htlc with creation tx %s does not exists!", claimdfchtlc.dfchtlcTx.GetHex());
+    }
+
+    if (claimdfchtlc.amount!=dfchtlc->amount) {
+        return Res::Err("amount in claim different than in dfc htlc: %s - %s!", ValueFromAmount(claimdfchtlc.amount).getValStr(),ValueFromAmount(dfchtlc->amount).getValStr());
+    }
+
+    uint256 calcHash;
+    CSHA256()
+        .Write(claimdfchtlc.seed.begin(),claimdfchtlc.seed.size())
+        .Finalize(calcHash.begin());
+    if (dfchtlc->hash != calcHash)
+        return Res::Err("hash generated from given seed is different than in dfc htlc: %s - %s!", calcHash.GetHex(), dfchtlc->hash.GetHex());
+
+    // Return here to avoid balance problems
+    if (rpcInfo) {
+        rpcInfo->pushKV("creationTx", claimdfchtlc.creationTx.GetHex());
+        rpcInfo->pushKV("dfchtlcTx", claimdfchtlc.dfchtlcTx.GetHex());
+        rpcInfo->pushKV("amount", claimdfchtlc.amount);
+        rpcInfo->pushKV("seed", claimdfchtlc.seed.GetHex());
+        return Res::Ok();
+    }
+
+    auto offer=mnview.GetICXMakeOfferByCreationTx(dfchtlc->offerTx);
+    if (!offer) {
+        return Res::Err("offer with creation tx %s does not exists!", dfchtlc->offerTx.GetHex());
+    }
+    auto order=mnview.GetICXOrderByCreationTx(offer->orderTx);
+    if (!order) {
+        return Res::Err("order with creation tx %s does not exists!", offer->orderTx.GetHex());
+    }
+
+    CTokenAmount amount;
+    std::string ownerAddress;
+    if (order->orderType == CICXOrder::TYPE_INTERNAL)
+    {
+        amount = {order->idTokenFrom,claimdfchtlc.amount};
+        ownerAddress = offer->receiveAddress;
+    }
+    else
+    {
+        amount = {order->idTokenTo,claimdfchtlc.amount};
+        ownerAddress = dfchtlc->receiveAddress;
+    }
+    
+    auto res = mnview.ICXClaimDFCHTLC(claimdfchtlc,*dfchtlc);
+    if (!res.ok) {
+        return Res::Err("%s %s: %s", __func__, claimdfchtlc.creationTx.GetHex(), res.msg);
+    }
+    auto res1 = mnview.AddBalance(GetScriptForDestination(DecodeDestination(ownerAddress)),amount);
+    if (!res1.ok) {
+        return Res::Err("%s: %s", __func__, res1.msg);
+    }
+    return Res::Ok();
+}
+
+Res ApplyICXCloseOrderTx(CCustomCSView & mnview, CCoinsViewCache const & coins, CTransaction const & tx, uint32_t height, std::vector<unsigned char> const & metadata, Consensus::Params const & consensusParams, bool skipAuth, UniValue *rpcInfo)
+{
+    // if ((int)height < consensusParams.EhardforkHeight) { return Res::Err("Order tx before Ehardfork height (block %d)", consensusParams.EhardforkHeight); }
+
+    // Check quick conditions first
+    if (tx.vout.size() != 2) {
+        return Res::Err("%s: %s", __func__, "malformed tx vouts (wrong number of vouts)");
+    }
+
+    CICXCloseOrderImplemetation closeorder;
+    CDataStream ss(metadata, SER_NETWORK, PROTOCOL_VERSION);
+    ss >> static_cast<CICXCloseOrder &>(closeorder);
+    if (!ss.empty()) {
+        return Res::Err("%s: deserialization failed: excess %d bytes", __func__, ss.size());
+    }
+    
+    closeorder.creationTx = tx.GetHash();
+    closeorder.creationHeight = height;
+
+    std::unique_ptr<CICXOrderImplemetation> order;
+    if (!(order = mnview.GetICXOrderByCreationTx(closeorder.orderTx))) {
+        return Res::Err("order with creation tx %s does not exists!", closeorder.orderTx.GetHex());
+    }
+    if (!order->closeTx.IsNull()) {
+        return Res::Err("order with creation tx %s is already closed!", closeorder.orderTx.GetHex());
+    }
+
+    const Coin& auth = coins.AccessCoin(COutPoint(order->creationTx, 1)); // always n=1 output
+    // check auth
+    std::cout << auth.out.scriptPubKey.GetHex() << std::endl;
+    if (!skipAuth && !HasAuth(tx, coins, auth.out.scriptPubKey)) {
+        return Res::Err("%s: %s", __func__, "tx must have at least one input from order owner");
+    }
+
+    order->closeTx = closeorder.creationTx;
+    order->closeHeight = closeorder.creationHeight;
+
+    // Return here to avoid already exist error
+    if (rpcInfo) {
+        rpcInfo->pushKV("orderTx", closeorder.orderTx.GetHex());
+        return Res::Ok();
+    }
+
+    // add the balance to tokenFrom to return amount that is left from reserve
+    if (order->amountToFill)
+    {
+        CTokenAmount amount={order->idTokenFrom,order->amountToFill};;
+        auto res = mnview.AddBalance(GetScriptForDestination(DecodeDestination(order->ownerAddress)),amount);
+        if (!res.ok) {
+            return Res::Err("%s: %s", __func__, res.msg);
+        }
+    }
+
+    auto res = mnview.ICXCloseOrder(closeorder);
+    if (!res.ok) {
+        return Res::Err("%s %s: %s", __func__, closeorder.creationTx.GetHex(), res.msg);
+    }
+    res = mnview.ICXCloseOrderTx(*order,CICXOrder::STATUS_CLOSED);
+    if (!res.ok) {
+        return Res::Err("%s %s: %s", __func__, closeorder.creationTx.GetHex(), res.msg);
+    }
+
+    return Res::Ok();
+}
 
 bool IsMempooledCustomTxCreate(const CTxMemPool & pool, const uint256 & txid)
 {

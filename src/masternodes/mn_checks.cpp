@@ -95,7 +95,6 @@ bool HasAuth(CTransaction const & tx, CCoinsViewCache const & coins, CScript con
 {
     for (auto input : tx.vin) {
         const Coin& coin = coins.AccessCoin(input.prevout);
-        std::cout << coin.out.scriptPubKey.GetHex() << "|" << auth.GetHex() << std::endl;
         if (!coin.IsSpent() && coin.out.scriptPubKey == auth)
             return true;
     }
@@ -1853,7 +1852,7 @@ Res ApplyICXSubmitEXTHTLCTx(CCustomCSView & mnview, CCoinsViewCache const & coin
             return Res::Err("offer %s needs to have dfc htlc submitted first, but no dfc htlc found!", offer->creationTx.GetHex());
 
         if (submitexthtlc.hash != dfchtlc->hash)
-            return Res::Err("Invalid hash, external htlc hash is different than dfc htlc hash!");
+            return Res::Err("Invalid hash, external htlc hash is different than dfc htlc hash! %s != %s",submitexthtlc.hash.GetHex(),dfchtlc->hash.GetHex());
     }
     else
     {
@@ -2007,7 +2006,6 @@ Res ApplyICXCloseOrderTx(CCustomCSView & mnview, CCoinsViewCache const & coins, 
 
     const Coin& auth = coins.AccessCoin(COutPoint(order->creationTx, 1)); // always n=1 output
     // check auth
-    std::cout << auth.out.scriptPubKey.GetHex() << std::endl;
     if (!skipAuth && !HasAuth(tx, coins, auth.out.scriptPubKey)) {
         return Res::Err("%s: %s", __func__, "tx must have at least one input from order owner");
     }

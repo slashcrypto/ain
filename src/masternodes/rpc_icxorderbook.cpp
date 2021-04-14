@@ -52,6 +52,7 @@ UniValue icxMakeOfferToJSON(CICXMakeOfferImplemetation const& makeoffer) {
 
 UniValue icxSubmitDFCHTLCToJSON(CICXSubmitDFCHTLCImplemetation const& dfchtlc) {
     UniValue orderObj(UniValue::VOBJ);
+    orderObj.pushKV("type", "DFC");
     orderObj.pushKV("offerTx", dfchtlc.offerTx.GetHex());
     orderObj.pushKV("amount", ValueFromAmount(dfchtlc.amount));
     orderObj.pushKV("hash", dfchtlc.hash.GetHex());
@@ -68,12 +69,13 @@ UniValue icxSubmitDFCHTLCToJSON(CICXSubmitDFCHTLCImplemetation const& dfchtlc) {
 
 UniValue icxSubmitEXTHTLCToJSON(CICXSubmitEXTHTLCImplemetation const& exthtlc) {
     UniValue orderObj(UniValue::VOBJ);
+    orderObj.pushKV("type", "EXTERNAL");
     orderObj.pushKV("offerTx", exthtlc.offerTx.GetHex());
     orderObj.pushKV("amount", ValueFromAmount(exthtlc.amount));
     orderObj.pushKV("htlcscriptAddress", exthtlc.htlcscriptAddress);
     orderObj.pushKV("hash", exthtlc.hash.GetHex());
     orderObj.pushKV("ownerPubkey", exthtlc.ownerPubkey);
-    orderObj.pushKV("timeout", static_cast<int>(exthtlc.timeout));
+    orderObj.pushKV("externalTimeout", static_cast<int>(exthtlc.timeout));
     orderObj.pushKV("height", static_cast<int>(exthtlc.creationHeight));
 
     UniValue ret(UniValue::VOBJ);
@@ -416,7 +418,7 @@ UniValue icxsubmitdfchtlc(const JSONRPCRequest& request) {
                             {"amount", RPCArg::Type::NUM, RPCArg::Optional::NO, "amount in htlc"},
                             {"receiveAddres", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "address for receiving DFC tokens in case of EXT/DFC order type"},
                             {"receivePubkey", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "pubkey which can claim external HTLC in case of DFC/EXT order type"},
-                            {"seed", RPCArg::Type::STR, RPCArg::Optional::NO, "secret seed for spending htlc"},
+                            {"hash", RPCArg::Type::STR, RPCArg::Optional::NO, "hash of seed used for the hash lock part"},
                             {"timeout", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "timeout (absolute in block) for expiration of htlc"},
                         },
                     },
@@ -466,14 +468,10 @@ UniValue icxsubmitdfchtlc(const JSONRPCRequest& request) {
         submitdfchtlc.amount = AmountFromValue(metaObj["amount"]);
     }
     else throw JSONRPCError(RPC_INVALID_PARAMETER,"Invalid parameters, argument \"amount\" must be non-null");
-    if (!metaObj["seed"].isNull()) {
-        uint256 calcHash, seed=uint256S(metaObj["seed"].getValStr());
-        CSHA256()
-            .Write(seed.begin(),seed.size())
-            .Finalize(calcHash.begin());
-        submitdfchtlc.hash = calcHash;
+    if (!metaObj["hash"].isNull()) {
+        submitdfchtlc.hash = uint256S(metaObj["hash"].getValStr());;
     }
-    else throw JSONRPCError(RPC_INVALID_PARAMETER,"Invalid parameters, argument \"seed\" must be non-null");
+    else throw JSONRPCError(RPC_INVALID_PARAMETER,"Invalid parameters, argument \"hash\" must be non-null");
     if (!metaObj["timeout"].isNull()) {
         submitdfchtlc.timeout = metaObj["timeout"].get_int();
     }

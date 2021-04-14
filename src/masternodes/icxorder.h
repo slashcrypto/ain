@@ -33,11 +33,11 @@ public:
     uint32_t expiry; // when the order exipreis in number of blocks
 
     CICXOrder()
-        : ownerAddress("")
+        : ownerAddress()
         , idTokenFrom({std::numeric_limits<uint32_t>::max()})
         , idTokenTo({std::numeric_limits<uint32_t>::max()})
-        , chainFrom("")
-        , chainTo("")
+        , chainFrom()
+        , chainTo()
         , orderType(TYPE_INTERNAL)
         , amountFrom(0)
         , amountToFill(0)
@@ -111,9 +111,9 @@ public:
     CICXMakeOffer()
         : orderTx(uint256())
         , amount(0)
-        , ownerAddress("")
-        , receiveAddress("")
-        , receivePubkey("")
+        , ownerAddress()
+        , receiveAddress()
+        , receivePubkey()
     {}
     virtual ~CICXMakeOffer() = default;
 
@@ -173,8 +173,8 @@ public:
     CICXSubmitDFCHTLC()
         : offerTx(uint256())
         , amount(0)
-        , receivePubKey("")
-        , receiveAddress("")
+        , receivePubKey()
+        , receiveAddress()
         , hash()
         , timeout(DEFAULT_TIMEOUT)
     {}
@@ -239,8 +239,8 @@ public:
         : offerTx(uint256())
         , amount(0)
         , hash()
-        , htlcscriptAddress("")
-        , ownerPubkey("")
+        , htlcscriptAddress()
+        , ownerPubkey()
         , timeout(0)
     {}
     virtual ~CICXSubmitEXTHTLC() = default;

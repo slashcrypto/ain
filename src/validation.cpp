@@ -2400,17 +2400,26 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
         // close expired orders, refund all expired DFC HTLCs at this block height
         {
-            mnview.ForEachICXOrderExpired([&](CICXOrderView::StatusKey const & key, uint8_t i) {
-                if (key.first != pindex->nHeight) return (false);
-                auto order = mnview.GetICXOrderByCreationTx(key.second);
-                mnview.ICXCloseOrderTx(*order,CICXOrder::STATUS_EXPIRED);
+            cache.ForEachICXOrderExpired([&](CICXOrderView::StatusKey const & key, uint8_t status) {
+                if (static_cast<int>(key.first) != pindex->nHeight) return (false);
+                auto order = cache.GetICXOrderByCreationTx(key.second);
+                if (order)
+                    cache.ICXCloseOrderTx(*order,status);
+                return true;
             },pindex->nHeight);
 
             mnview.ForEachICXSubmitDFCHTLCExpired([&](CICXOrderView::StatusKey const & key, uint8_t i) {
-                if (key.first != pindex->nHeight) return (false);
+                if (static_cast<int>(key.first) != pindex->nHeight) return (false);
+
                 auto dfchtlc = mnview.GetICXSubmitDFCHTLCByCreationTx(key.second);
+                if (!dfchtlc)
+                    return (false);
                 auto offer = mnview.GetICXMakeOfferByCreationTx(dfchtlc->offerTx);
+                if (!offer)
+                    return (false);
                 auto order = mnview.GetICXOrderByCreationTx(offer->orderTx);
+                if (!order)
+                    return (false);
 
                 CTokenAmount amount;
                 std::string ownerAddress;
@@ -2425,7 +2434,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     ownerAddress = offer->ownerAddress;
                 }
                 auto res = mnview.AddBalance(GetScriptForDestination(DecodeDestination(ownerAddress)),amount);
-                res = mnview.ICXRefundDFCHTLC(*dfchtlc);
+                if (res.ok) 
+                    mnview.ICXRefundDFCHTLC(*dfchtlc);
 
                 return (true);
             },pindex->nHeight);

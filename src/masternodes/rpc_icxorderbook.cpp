@@ -1076,8 +1076,10 @@ UniValue icxlisthtlcs(const JSONRPCRequest& request) {
                         {"by", RPCArg::Type::OBJ, RPCArg::Optional::NO, "",
                             {
                                 {"offerTx",RPCArg::Type::STR, RPCArg::Optional::NO, "Offer txid  for which to list all HTLCS"},
+                                {"limit",  RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "Maximum number of orders to return (default: 20)"},
                                 {"refunded", RPCArg::Type::BOOL, RPCArg::Optional::OMITTED, "Display refunded HTLC (default: false)"},
                                 {"claimed",  RPCArg::Type::BOOL, RPCArg::Optional::OMITTED, "Display claimed HTLCs (default: false)"},
+                                
                             },
                         },
                 },
@@ -1103,7 +1105,7 @@ UniValue icxlisthtlcs(const JSONRPCRequest& request) {
                            "Invalid parameters, arguments 1 must be non-null and expected as object at least with "
                            "{\"dfchtlcTx\",\"amount\",\"receiverAddress\",\"seed\"}");
     }
-    size_t limit = 50;
+    size_t limit = 20;
     uint256 offerTxid;
     bool refunded = false, claimed = false;
     
@@ -1112,6 +1114,7 @@ UniValue icxlisthtlcs(const JSONRPCRequest& request) {
     else throw JSONRPCError(RPC_INVALID_PARAMETER,"Invalid parameters, argument \"offerTx\" must be non-null");
     if (!byObj["refunded"].isNull()) refunded = byObj["refunded"].get_bool();
     if (!byObj["claimed"].isNull()) claimed = byObj["claimed"].get_bool();
+    if (!byObj["limit"].isNull()) limit = (size_t) byObj["limit"].get_int64();
     
     uint8_t status = CICXSubmitDFCHTLC::STATUS_OPEN;
     if (refunded) status = CICXSubmitDFCHTLC::STATUS_REFUNDED;
@@ -1119,18 +1122,20 @@ UniValue icxlisthtlcs(const JSONRPCRequest& request) {
     
     UniValue ret(UniValue::VOBJ);
     pcustomcsview->ForEachICXSubmitDFCHTLC([&](CICXOrderView::StatusTxidKey const & key, uint8_t i) {
-        if (key.first.second != offerTxid)
+        if (key.first.first != status || key.first.second != offerTxid)
             return false;
         auto dfchtlc = pcustomcsview->GetICXSubmitDFCHTLCByCreationTx(key.second);
-        if (dfchtlc) ret.pushKVs(icxSubmitDFCHTLCToJSON(*dfchtlc));
+        if (dfchtlc)
+            ret.pushKVs(icxSubmitDFCHTLCToJSON(*dfchtlc));
         limit--;
         return limit != 0;
     },{status,offerTxid});
     pcustomcsview->ForEachICXSubmitEXTHTLC([&](CICXOrderView::StatusTxidKey const & key, uint8_t i) {
-        if (key.first.second != offerTxid)
+        if (key.first.first != status || key.first.second != offerTxid)
             return false;
         auto exthtlc = pcustomcsview->GetICXSubmitEXTHTLCByCreationTx(key.second);
-        if (exthtlc) ret.pushKVs(icxSubmitEXTHTLCToJSON(*exthtlc));
+        if (exthtlc)
+            ret.pushKVs(icxSubmitEXTHTLCToJSON(*exthtlc));
         limit--;
         return limit != 0;
     },{status,offerTxid});

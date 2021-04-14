@@ -36,13 +36,9 @@ const int CICXSubmitEXTHTLC::STATUS_EXPIRED = 1;
 
 std::unique_ptr<CICXOrderView::CICXOrderImpl> CICXOrderView::GetICXOrderByCreationTx(const uint256 & txid) const
 {
-    // auto statusAsset = ReadBy<ICXOrderCreationTx, StatusAsset>(txid);
-    // if (statusAsset)
-    // {
-        auto order = ReadBy<ICXOrderCreationTx,CICXOrderImpl>(txid);
-        if (order)
-            return MakeUnique<CICXOrderImpl>(*order);
-    // }
+    auto order = ReadBy<ICXOrderCreationTx,CICXOrderImpl>(txid);
+    if (order)
+        return MakeUnique<CICXOrderImpl>(*order);
     return (nullptr);
 }
 
@@ -54,8 +50,10 @@ ResVal<uint256> CICXOrderView::ICXCreateOrder(const CICXOrderImpl& order)
     }
 
     AssetPair pair;
-    if (order.orderType == CICXOrder::TYPE_INTERNAL) pair = {order.idTokenFrom,order.chainTo};
-    else pair = {order.idTokenTo,order.chainFrom};
+    if (order.orderType == CICXOrder::TYPE_INTERNAL) 
+        pair = {order.idTokenFrom,order.chainTo};
+    else 
+        pair = {order.idTokenTo,order.chainFrom};
 
     OrderKey key({CICXOrder::STATUS_OPEN,pair}, order.creationTx);
     WriteBy<ICXOrderCreationTx>(order.creationTx, order);
@@ -68,8 +66,10 @@ ResVal<uint256> CICXOrderView::ICXCreateOrder(const CICXOrderImpl& order)
 ResVal<uint256> CICXOrderView::ICXCloseOrderTx(const CICXOrderImpl& order, const uint8_t status)
 {
     AssetPair pair;
-    if (order.chainFrom.empty()) pair={order.idTokenFrom,order.chainTo};
-    else pair={order.idTokenTo,order.chainFrom};
+    if (order.orderType == CICXOrder::TYPE_INTERNAL) 
+        pair = {order.idTokenFrom,order.chainTo};
+    else 
+        pair = {order.idTokenTo,order.chainFrom};
     
     OrderKey key({CICXOrder::STATUS_OPEN,pair},order.creationTx);
     EraseBy<ICXOrderKey>(key);
@@ -91,7 +91,7 @@ void CICXOrderView::ForEachICXOrder(std::function<bool (OrderKey const &, uint8_
 void CICXOrderView::ForEachICXOrderExpired(std::function<bool (StatusKey const &, uint8_t)> callback, uint32_t const & height)
 {
     StatusKey start(height, uint256());
-    ForEach<ICXOrderKey,StatusKey,uint8_t>([&start,&callback] (StatusKey const &key, uint8_t i) {
+    ForEach<ICXOrderStatus,StatusKey,uint8_t>([&start,&callback] (StatusKey const &key, uint8_t i) {
         return callback(key, i);
     }, start);
 }

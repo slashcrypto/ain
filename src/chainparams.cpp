@@ -452,8 +452,8 @@ public:
         consensus.BayfrontMarinaHeight = 0;
         consensus.BayfrontGardensHeight = 0;
         consensus.ClarkeQuayHeight = 0;
-        consensus.DakotaHeight = 0;
-        consensus.DakotaCrescentHeight = 0;
+        consensus.DakotaHeight = 10;
+        consensus.DakotaCrescentHeight = 10;
 
         consensus.pos.diffLimit = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.pos.nTargetTimespan = 5 * 60; // 5 min == 10 blocks

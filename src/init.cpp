@@ -1753,7 +1753,7 @@ bool AppInitMain(InitInterfaces& interfaces)
             spv::pspv.reset();
             if (Params().NetworkIDString() == "regtest") {
                 spv::pspv = MakeUnique<spv::CFakeSpvWrapper>();
-            } else if (Params().NetworkIDString() == "test") {
+            } else if (Params().NetworkIDString() == "test" || Params().NetworkIDString() == "devnet") {
                 spv::pspv = MakeUnique<spv::CSpvWrapper>(false, nMinDbCache << 20, false, gArgs.GetBoolArg("-spv_resync", false));
             } else {
                 spv::pspv = MakeUnique<spv::CSpvWrapper>(true, nMinDbCache << 20, false, gArgs.GetBoolArg("-spv_resync", false));

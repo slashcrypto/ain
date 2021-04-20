@@ -756,7 +756,7 @@ UniValue icxclaimdfchtlc(const JSONRPCRequest& request) {
     }
     else throw JSONRPCError(RPC_INVALID_PARAMETER,"Invalid parameters, argument \"amount\" must be non-null");
     if (!metaObj["seed"].isNull()) {
-        claimdfchtlc.seed = uint256S(metaObj["seed"].getValStr());
+        claimdfchtlc.seed = ParseHex(metaObj["seed"].getValStr());
     }
     else throw JSONRPCError(RPC_INVALID_PARAMETER,"Invalid parameters, argument \"seed\" must be non-null");
 
@@ -771,10 +771,13 @@ UniValue icxclaimdfchtlc(const JSONRPCRequest& request) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "amount in claim different than in dfc htlc: " + ValueFromAmount(claimdfchtlc.amount).getValStr() + " - " + ValueFromAmount(dfchtlc->amount).getValStr());
         }
 
+        std::vector<unsigned char> calcSeedBytes(32);
         uint256 calcHash;
-        CSHA256()
-            .Write(claimdfchtlc.seed.begin(),claimdfchtlc.seed.size())
-            .Finalize(calcHash.begin());
+            CSHA256()
+                .Write(claimdfchtlc.seed.data(),claimdfchtlc.seed.size())
+                .Finalize(calcSeedBytes.data());
+        calcHash.SetHex(HexStr(calcSeedBytes));
+
         if (dfchtlc->hash != calcHash)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "hash generated from given seed is different than in dfc htlc: " + calcHash.GetHex() + " - " + dfchtlc->hash.GetHex());
         

@@ -1929,9 +1929,12 @@ Res ApplyICXClaimDFCHTLCTx(CCustomCSView & mnview, CCoinsViewCache const & coins
     }
 
     uint256 calcHash;
+    std::vector<unsigned char> calcSeedBytes(32);
     CSHA256()
-        .Write(claimdfchtlc.seed.begin(),claimdfchtlc.seed.size())
-        .Finalize(calcHash.begin());
+        .Write(claimdfchtlc.seed.data(),claimdfchtlc.seed.size())
+        .Finalize(calcSeedBytes.data());
+    calcHash.SetHex(HexStr(calcSeedBytes));
+
     if (dfchtlc->hash != calcHash)
         return Res::Err("hash generated from given seed is different than in dfc htlc: %s - %s!", calcHash.GetHex(), dfchtlc->hash.GetHex());
 
@@ -1940,7 +1943,7 @@ Res ApplyICXClaimDFCHTLCTx(CCustomCSView & mnview, CCoinsViewCache const & coins
         rpcInfo->pushKV("creationTx", claimdfchtlc.creationTx.GetHex());
         rpcInfo->pushKV("dfchtlcTx", claimdfchtlc.dfchtlcTx.GetHex());
         rpcInfo->pushKV("amount", claimdfchtlc.amount);
-        rpcInfo->pushKV("seed", claimdfchtlc.seed.GetHex());
+        rpcInfo->pushKV("seed", HexStr(claimdfchtlc.seed));
         return Res::Ok();
     }
 

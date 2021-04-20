@@ -289,7 +289,7 @@ public:
     //! basic properties
     uint256 dfchtlcTx; // txid of claiming DFC HTLC
     CAmount amount; // amount that is put in HTLC
-    uint256 seed; // secret for the hash to claim htlc
+    std::vector<unsigned char> seed; // secret for the hash to claim htlc
 
     CICXClaimDFCHTLC()
         : dfchtlcTx(uint256())

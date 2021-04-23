@@ -6,6 +6,7 @@
 #include <amount.h>
 #include <pubkey.h>
 #include <uint256.h>
+#include <script/script.h>
 
 #include <flushablestorage.h>
 #include <masternodes/res.h>
@@ -21,24 +22,20 @@ public:
     static const int STATUS_EXPIRED;
 
     //! basic properties
-    std::string ownerAddress; //address of account asset
-    DCT_ID idTokenFrom; // used for DFT/BTC
-    DCT_ID idTokenTo; // used fot BTC/DFT
-    std::string chainFrom; // used for BTC/DFT
-    std::string chainTo; // used for DFT/BTC
     uint8_t orderType; //is maker buying or selling DFC asset to know which htlc to come first
+    DCT_ID idToken; // used for DFT/BTC
+    std::string chain; // used for BTC/DFT
+    CScript ownerAddress; //address of token asset in case of DFC/BTC order
     CAmount amountFrom; // amount of asset that is selled
     CAmount amountToFill; // how much is left to fill the order
     CAmount orderPrice; 
     uint32_t expiry; // when the order exipreis in number of blocks
 
     CICXOrder()
-        : ownerAddress()
-        , idTokenFrom({std::numeric_limits<uint32_t>::max()})
-        , idTokenTo({std::numeric_limits<uint32_t>::max()})
-        , chainFrom()
-        , chainTo()
-        , orderType(TYPE_INTERNAL)
+        : orderType(0)
+        , idToken({std::numeric_limits<uint32_t>::max()})
+        , chain()
+        , ownerAddress()
         , amountFrom(0)
         , amountToFill(0)
         , orderPrice(0)
@@ -50,12 +47,10 @@ public:
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(ownerAddress);
-        READWRITE(VARINT(idTokenFrom.v));
-        READWRITE(VARINT(idTokenTo.v));
-        READWRITE(chainFrom);
-        READWRITE(chainTo);
         READWRITE(orderType);
+        READWRITE(VARINT(idToken.v));
+        READWRITE(chain);
+        READWRITE(ownerAddress);
         READWRITE(amountFrom);
         READWRITE(amountToFill);
         READWRITE(orderPrice);
@@ -96,6 +91,16 @@ public:
     }
 };
 
+struct CICXCreateOrderMessage : public CICXOrder {
+    using CICXOrder::CICXOrder;
+
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITEAS(CICXOrder, *this);
+    }
+};
+
 class CICXMakeOffer
 {
 public:
@@ -104,16 +109,12 @@ public:
     //! basic properties
     uint256 orderTx; // txid for which order is the offer
     CAmount amount; // amount of asset to swap
-    std::string ownerAddress; //address of account asset
-    std::string receiveAddress; //address of account asset in case of BTC/DFI
-    std::string receivePubkey; // pubkey for BTC htlc  in case of DFI/BTC
+    std::vector<uint8_t> receiveDestination; // address or pubkey of receiving asset
 
     CICXMakeOffer()
         : orderTx(uint256())
         , amount(0)
-        , ownerAddress()
-        , receiveAddress()
-        , receivePubkey()
+        , receiveDestination()
     {}
     virtual ~CICXMakeOffer() = default;
 
@@ -123,9 +124,7 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(orderTx);
         READWRITE(amount);
-        READWRITE(ownerAddress);
-        READWRITE(receiveAddress);
-        READWRITE(receivePubkey);
+        READWRITE(receiveDestination);
     }
 };
 
@@ -153,6 +152,16 @@ public:
     }
 };
 
+struct CICXMakeOfferMessage : public CICXMakeOffer {
+    using CICXMakeOffer::CICXMakeOffer;
+
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITEAS(CICXMakeOffer, *this);
+    }
+};
+
 class CICXSubmitDFCHTLC
 {
 public:
@@ -165,16 +174,14 @@ public:
     //! basic properties
     uint256 offerTx; // txid for which offer is this HTLC
     CAmount amount; // amount that is put in HTLC
-    std::string receivePubKey; // pubkey for BTC htlc  in case of DFI/BTC
-    std::string receiveAddress; //address of account asset in case of BTC/DFI
+    std::vector<uint8_t> receiveDestination; // address or pubkey of receiving asset
     uint256 hash; // hash for the hash lock part
     uint32_t timeout; // timeout (absolute in blocks) for timelock part
 
     CICXSubmitDFCHTLC()
         : offerTx(uint256())
         , amount(0)
-        , receivePubKey()
-        , receiveAddress()
+        , receiveDestination()
         , hash()
         , timeout(DEFAULT_TIMEOUT)
     {}
@@ -186,8 +193,7 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(offerTx);
         READWRITE(amount);
-        READWRITE(receivePubKey);
-        READWRITE(receiveAddress);
+        READWRITE(receiveDestination);
         READWRITE(hash);
         READWRITE(timeout);
     }
@@ -220,6 +226,16 @@ public:
     }
 };
 
+struct CICXSubmitDFCHTLCMessage : public CICXSubmitDFCHTLC {
+    using CICXSubmitDFCHTLC::CICXSubmitDFCHTLC;
+
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITEAS(CICXSubmitDFCHTLC, *this);
+    }
+};
+
 class CICXSubmitEXTHTLC
 {
 public:
@@ -232,7 +248,7 @@ public:
     CAmount amount;
     uint256 hash; 
     std::string htlcscriptAddress;
-    std::string ownerPubkey;
+    CPubKey ownerPubkey;
     uint32_t timeout;
 
     CICXSubmitEXTHTLC()
@@ -282,18 +298,26 @@ public:
     }
 };
 
+struct CICXSubmitEXTHTLCMessage : public CICXSubmitEXTHTLC {
+    using CICXSubmitEXTHTLC::CICXSubmitEXTHTLC;
+
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITEAS(CICXSubmitEXTHTLC, *this);
+    }
+};
+
 class CICXClaimDFCHTLC
 {
 public:
     // This tx is acceptance of the offer, HTLC tx and evidence of HTLC on DFC in the same time. It is a CustomTx on DFC chain
     //! basic properties
     uint256 dfchtlcTx; // txid of claiming DFC HTLC
-    CAmount amount; // amount that is put in HTLC
     std::vector<unsigned char> seed; // secret for the hash to claim htlc
 
     CICXClaimDFCHTLC()
         : dfchtlcTx(uint256())
-        , amount(0)
         , seed()
     {}
     virtual ~CICXClaimDFCHTLC() = default;
@@ -303,7 +327,6 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(dfchtlcTx);
-        READWRITE(amount);
         READWRITE(seed);
     }
 };
@@ -329,6 +352,16 @@ public:
         READWRITEAS(CICXClaimDFCHTLC, *this);
         READWRITE(creationTx);
         READWRITE(creationHeight);
+    }
+};
+
+struct CICXClaimDFCHTLCMessage : public CICXClaimDFCHTLC {
+    using CICXClaimDFCHTLC::CICXClaimDFCHTLC;
+
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITEAS(CICXClaimDFCHTLC, *this);
     }
 };
 
@@ -372,6 +405,16 @@ public:
         READWRITEAS(CICXCloseOrder, *this);
         READWRITE(creationTx);
         READWRITE(creationHeight);
+    }
+};
+
+struct CICXCloseOrderMessage : public CICXCloseOrder {
+    using CICXCloseOrder::CICXCloseOrder;
+
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITEAS(CICXCloseOrder, *this);
     }
 };
 

@@ -115,6 +115,7 @@ BASE_SCRIPTS = [
     'wallet_keypool_topup.py',
     'feature_fee_estimation.py',
     'feature_dip1.py',
+    'feature_dfip8_communitybalances.py',
     'feature_anchors.py',
     'feature_anchorauths.py',
     'feature_anchor_rewards.py',
@@ -245,6 +246,7 @@ BASE_SCRIPTS = [
     'rpc_help.py',
     'feature_help.py',
     'feature_shutdown.py',
+    'feature_oracles.py',
     'rpc_getmininginfo.py',
     # Don't append tests at the end to avoid merge conflicts
     # Put them in a random line within the section that fits their approximate run-time

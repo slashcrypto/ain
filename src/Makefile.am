@@ -167,11 +167,11 @@ DEFI_CORE_H = \
   masternodes/mn_checks.h \
   masternodes/mn_rpc.h \
   masternodes/res.h \
-  masternodes/rewardhistoryold.h \
   masternodes/tokens.h \
   masternodes/poolpairs.h \
   masternodes/undo.h \
   masternodes/undos.h \
+  masternodes/oracles.h \
   memusage.h \
   merkleblock.h \
   miner.h \
@@ -368,6 +368,7 @@ libdefi_server_a_SOURCES = \
   masternodes/accountshistory.cpp \
   masternodes/anchors.cpp \
   masternodes/criminals.cpp \
+  masternodes/oracles.cpp \
   masternodes/govvariables/lp_daily_dfi_reward.cpp \
   masternodes/govvariables/lp_splits.cpp \
   masternodes/gv.cpp \
@@ -376,11 +377,13 @@ libdefi_server_a_SOURCES = \
   masternodes/masternodes.cpp \
   masternodes/mn_checks.cpp \
   masternodes/mn_rpc.cpp \
-  masternodes/rpc_masternodes.cpp \
   masternodes/rpc_accounts.cpp \
+  masternodes/rpc_customtx.cpp \
+  masternodes/rpc_masternodes.cpp \
   masternodes/rpc_icxorderbook.cpp \
-  masternodes/rpc_tokens.cpp \
+  masternodes/rpc_oracles.cpp \
   masternodes/rpc_poolpair.cpp \
+  masternodes/rpc_tokens.cpp \
   masternodes/tokens.cpp \
   masternodes/poolpairs.cpp \
   masternodes/undos.cpp \

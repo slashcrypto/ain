@@ -3,22 +3,22 @@
 /// @attention make sure that it does not overlap with other views !!!
 const unsigned char CICXOrderView::ICXOrderCreationTx           ::prefix = '1';
 const unsigned char CICXOrderView::ICXOrderKey                  ::prefix = '2';
-const unsigned char CICXOrderView::ICXOrderStatus               ::prefix = 'd';
+const unsigned char CICXOrderView::ICXOrderStatus               ::prefix = 'B';
 const unsigned char CICXOrderView::ICXMakeOfferCreationTx       ::prefix = '3';
 const unsigned char CICXOrderView::ICXMakeOfferKey              ::prefix = '4';
 const unsigned char CICXOrderView::ICXSubmitDFCHTLCCreationTx   ::prefix = '5';
 const unsigned char CICXOrderView::ICXSubmitDFCHTLCKey          ::prefix = '6';
-const unsigned char CICXOrderView::ICXSubmitDFCHTLCStatus       ::prefix = 'c';
-const unsigned char CICXOrderView::ICXSubmitEXTHTLCCreationTx   ::prefix = '7';
-const unsigned char CICXOrderView::ICXSubmitEXTHTLCKey          ::prefix = '8';
-const unsigned char CICXOrderView::ICXClaimDFCHTLCCreationTx    ::prefix = '9';
-const unsigned char CICXOrderView::ICXClaimDFCHTLCKey           ::prefix = '0';
-const unsigned char CICXOrderView::ICXCloseOrderCreationTx      ::prefix = 'a';
+const unsigned char CICXOrderView::ICXSubmitDFCHTLCStatus       ::prefix = 'C';
 const unsigned char CICXOrderView::ICXCloseOrderKey             ::prefix = 'b';
-
 const int CICXOrder::DEFAULT_EXPIRY = 2880;
 const int CICXOrder::TYPE_INTERNAL = 1;
 const int CICXOrder::TYPE_EXTERNAL = 0;
+=======
+const unsigned char CICXOrderView::ICXCloseOrderCreationTx      ::prefix = 'A';
+
+const int CICXOrder::DEFAULT_EXPIRY = 2880;
+const int CICXOrder::TYPE_INTERNAL = 1;
+const int CICXOrder::TYPE_EXTERNAL = 2;
 const int CICXOrder::STATUS_OPEN = 0;
 const int CICXOrder::STATUS_CLOSED = 1;
 const int CICXOrder::STATUS_EXPIRED = 2;
@@ -49,13 +49,7 @@ ResVal<uint256> CICXOrderView::ICXCreateOrder(const CICXOrderImpl& order)
         return Res::Err("order with creation tx %s already exists!", order.creationTx.GetHex());
     }
 
-    AssetPair pair;
-    if (order.orderType == CICXOrder::TYPE_INTERNAL) 
-        pair = {order.idTokenFrom,order.chainTo};
-    else 
-        pair = {order.idTokenTo,order.chainFrom};
-
-    OrderKey key({CICXOrder::STATUS_OPEN,pair}, order.creationTx);
+    OrderKey key({CICXOrder::STATUS_OPEN,{order.idToken,order.chain}}, order.creationTx);
     WriteBy<ICXOrderCreationTx>(order.creationTx, order);
     WriteBy<ICXOrderKey>(key, 1);
     WriteBy<ICXOrderStatus>(StatusKey(order.creationHeight+order.expiry,order.creationTx),CICXOrder::STATUS_EXPIRED);
@@ -65,13 +59,7 @@ ResVal<uint256> CICXOrderView::ICXCreateOrder(const CICXOrderImpl& order)
 
 ResVal<uint256> CICXOrderView::ICXCloseOrderTx(const CICXOrderImpl& order, const uint8_t status)
 {
-    AssetPair pair;
-    if (order.orderType == CICXOrder::TYPE_INTERNAL) 
-        pair = {order.idTokenFrom,order.chainTo};
-    else 
-        pair = {order.idTokenTo,order.chainFrom};
-    
-    OrderKey key({CICXOrder::STATUS_OPEN,pair},order.creationTx);
+    OrderKey key({CICXOrder::STATUS_OPEN,{order.idToken,order.chain}},order.creationTx);
     EraseBy<ICXOrderKey>(key);
     key.first.first = status;
     WriteBy<ICXOrderKey>(key, 1);
@@ -117,10 +105,7 @@ ResVal<uint256> CICXOrderView::ICXMakeOffer(const CICXMakeOfferImpl& makeoffer, 
     if (order.closeHeight > -1) this->ICXCloseOrderTx(order,CICXOrder::STATUS_CLOSED);
     else
     {
-        AssetPair pair;
-        if (order.orderType) pair={order.idTokenFrom,order.chainTo};
-        else pair={order.idTokenTo,order.chainFrom};
-        OrderKey key({CICXOrder::STATUS_OPEN, pair}, order.creationTx);
+        OrderKey key({CICXOrder::STATUS_OPEN, {order.idToken,order.chain}}, order.creationTx);
         WriteBy<ICXOrderKey>(key, 1);
         WriteBy<ICXOrderCreationTx>(order.creationTx, order);
     }

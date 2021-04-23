@@ -52,6 +52,9 @@ struct Params {
     uint256 hashGenesisBlock;
     int nSubsidyHalvingInterval;
     CAmount baseBlockSubsidy;
+    CAmount newBaseBlockSubsidy;
+    uint32_t emissionReductionPeriod;
+    uint32_t emissionReductionAmount;
     CScript foundationShareScript;
     uint32_t foundationShare;
     std::set<CScript> foundationMembers;
@@ -82,8 +85,24 @@ struct Params {
     int DakotaHeight;
     /** Fifth major fork **/
     int DakotaCrescentHeight;
+    /** Sixth major fork **/
+    int EunosHeight;
     /** Foundation share after AMK, normalized to COIN = 100% */
     CAmount foundationShareDFIP1;
+
+    /** Struct to hold percentages for coinbase distribution.
+     *  Percentages are calculated out of 10000 */
+    struct CoinbaseDistribution {
+        uint32_t masternode; // Mining reward
+        uint32_t community; // Community fund
+        uint32_t anchor; // Anchor reward
+        uint32_t liquidity; // Liquidity mining
+        uint32_t swap; // Atomic swap
+        uint32_t futures; // Futures
+        uint32_t options; // Options
+        uint32_t unallocated; // Reserved
+    };
+    CoinbaseDistribution dist;
 
     /** Proof of stake parameters */
     struct PoS {
@@ -103,6 +122,10 @@ struct Params {
     };
     PoS pos;
 
+    uint32_t blocksPerDay() const {
+        static const uint32_t blocks = 60 * 60 * 24 / pos.nTargetSpacing;
+        return blocks;
+    }
     /**
      * Minimum blocks including miner confirmation of the total of 2016 blocks in a retargeting period,
      * (nTargetTimespan / nTargetSpacing) which is also used for BIP9 deployments.
@@ -148,6 +171,7 @@ struct Params {
     SpvParams spv;
 
     std::map<CommunityAccountType, CAmount> nonUtxoBlockSubsidies;
+    std::map<CommunityAccountType, uint32_t> newNonUTXOSubsidies;
 };
 } // namespace Consensus
 

@@ -126,6 +126,7 @@ public:
         consensus.DakotaCrescentHeight = 733000; // 25th March 2021
         consensus.EunosHeight = 894000; // 3rd June 2021
         consensus.EunosSimsHeight = consensus.EunosHeight;
+        consensus.FHardforkHeight = 10000000;
 
         consensus.pos.diffLimit = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 //        consensus.pos.nTargetTimespan = 14 * 24 * 60 * 60; // two weeks
@@ -342,6 +343,7 @@ public:
         consensus.DakotaCrescentHeight = 287700;
         consensus.EunosHeight = 427040; // 21st May 2021
         consensus.EunosSimsHeight = 435800; // 24th May 2021
+        consensus.FHardforkHeight = 10000000;
 
         consensus.pos.diffLimit = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 //        consensus.pos.nTargetTimespan = 14 * 24 * 60 * 60; // two weeks
@@ -521,6 +523,7 @@ public:
         consensus.DakotaCrescentHeight = 10;
         consensus.EunosHeight = 10;
         consensus.EunosSimsHeight = 10;
+        consensus.FHardforkHeight = 10;
 
         consensus.pos.diffLimit = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.pos.nTargetTimespan = 5 * 60; // 5 min == 10 blocks
@@ -690,6 +693,7 @@ public:
         consensus.DakotaCrescentHeight = 10000000;
         consensus.EunosHeight = 10000000;
         consensus.EunosSimsHeight = 10000000;
+        consensus.FHardforkHeight = 10000000;
 
         consensus.pos.diffLimit = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.pos.nTargetTimespan = 14 * 24 * 60 * 60; // two weeks
@@ -939,6 +943,17 @@ void CRegTestParams::UpdateActivationParametersFromArgs(const ArgsManager& args)
         }
         consensus.EunosHeight = static_cast<int>(height);
         consensus.EunosSimsHeight = static_cast<int>(height);
+    }
+
+    if (gArgs.IsArgSet("-fhardforkheigh")) {
+        int64_t height = gArgs.GetArg("-fhardforkheigh", consensus.FHardforkHeight);
+        if (height < -1 || height >= std::numeric_limits<int>::max()) {
+            throw std::runtime_error(strprintf("Activation height %ld for F hardfork is out of valid range. Use -1 to disable F hardfork features.", height));
+        } else if (height == -1) {
+            LogPrintf("F hardfork disabled for testing\n");
+            height = std::numeric_limits<int>::max();
+        }
+        consensus.FHardforkHeight = static_cast<int>(height);
     }
 
     if (!args.IsArgSet("-vbparams")) return;

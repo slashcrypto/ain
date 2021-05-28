@@ -472,6 +472,7 @@ void SetupServerArgs()
     gArgs.AddArg("-dakotaheight", "Dakota fork activation height (regtest only)", ArgsManager::ALLOW_ANY, OptionsCategory::CHAINPARAMS);
     gArgs.AddArg("-dakotacrescentheight", "DakotaCrescent fork activation height (regtest only)", ArgsManager::ALLOW_ANY, OptionsCategory::CHAINPARAMS);
     gArgs.AddArg("-eunosheight", "Eunos fork activation height (regtest only)", ArgsManager::ALLOW_ANY, OptionsCategory::CHAINPARAMS);
+    gArgs.AddArg("-fhardforkheight", "F fork activation height (regtest only)", ArgsManager::ALLOW_ANY, OptionsCategory::CHAINPARAMS);
 #ifdef USE_UPNP
 #if USE_UPNP
     gArgs.AddArg("-upnp", "Use UPnP to map the listening port (default: 1 when listening and no -proxy)", ArgsManager::ALLOW_ANY, OptionsCategory::CONNECTION);
@@ -1754,7 +1755,7 @@ bool AppInitMain(InitInterfaces& interfaces)
         panchors.reset();
 
         // Enable the anchors and spv by default
-        bool anchorsEnabled = true; 
+        bool anchorsEnabled = true;
         panchors = MakeUnique<CAnchorIndex>(nDefaultDbCache << 20, false, gArgs.GetBoolArg("-spv", anchorsEnabled) && gArgs.GetBoolArg("-spv_resync", fReindex || fReindexChainState));
 
         // load anchors after spv due to spv (and spv height) not set before (no last height yet)
